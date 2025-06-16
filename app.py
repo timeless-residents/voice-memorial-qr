@@ -122,7 +122,7 @@ def generate_hybrid_qr():
             return jsonify({'error': 'File too large. Max 5MB for optimal processing.'}), 400
         
         # ファイル形式確認
-        allowed_extensions = {'.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'}
+        allowed_extensions = {'.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.webm', '.mp4'}
         file_extension = Path(audio_file.filename).suffix.lower()
         if file_extension not in allowed_extensions:
             return jsonify({'error': f'Unsupported file format. Supported: {", ".join(allowed_extensions)}'}), 400
