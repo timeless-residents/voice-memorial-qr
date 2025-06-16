@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Voice Memorial QR - 世界初ハイブリッド音声保存技術</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,6 +48,79 @@
             padding: 40px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             margin-bottom: 30px;
+        }
+
+        /* 録音機能のスタイル */
+        .recording-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .record-button {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .record-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+
+        .record-button:disabled {
+            opacity: 0.6;
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .recording-status {
+            margin: 20px 0;
+        }
+
+        .recording-indicator {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider span {
+            background: white;
+            padding: 0 20px;
+            color: #666;
+            font-weight: bold;
         }
         
         .upload-area {
@@ -187,6 +263,37 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .record-button {
+                font-size: 1.4em;
+                padding: 25px 20px;
+            }
+            
+            .upload-area {
+                padding: 40px 20px;
+            }
+            
+            .container {
+                padding: 20px 15px;
+            }
+
+            .header h1 {
+                font-size: 2.5em;
+            }
+        }
+
+        /* タッチデバイス用 */
+        @media (hover: none) and (pointer: coarse) {
+            .record-button:active {
+                transform: scale(0.95);
+            }
+            
+            .upload-button:active {
+                transform: scale(0.95);
+            }
+        }
     </style>
 </head>
 <body>
@@ -208,16 +315,32 @@
         
         <div class="upload-section">
             <form id="uploadForm" enctype="multipart/form-data">
+                
+                <!-- 録音機能セクション -->
+                <div class="recording-section">
+                    <button type="button" class="record-button" id="recordButton">
+                        🎤 2秒録音
+                    </button>
+                    <div id="recordingStatus" class="recording-status" style="display: none;">
+                        <div class="recording-indicator">🔴 録音中... <span id="countdown">2</span></div>
+                    </div>
+                </div>
+
+                <div class="divider">
+                    <span>または</span>
+                </div>
+                
+                <!-- ファイルアップロードセクション -->
                 <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">🎤</div>
+                    <div class="upload-icon">📁</div>
                     <h3>音声ファイルをドラッグ&ドロップ</h3>
-                    <p>3秒以内の音声推奨（最適なQRサイズ）</p>
+                    <p>2秒以内の音声推奨（最適なQRサイズ）</p>
                     <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                        対応形式: MP3, M4A, WAV, AAC, OGG, FLAC
+                        対応形式: MP3, M4A, WAV, AAC, OGG, FLAC, WebM
                     </p>
                     <input type="file" id="audioFile" name="audio" 
-       accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4" 
-       class="file-input">
+                           accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4,.webm" 
+                           class="file-input">
                     <button type="button" class="upload-button" onclick="document.getElementById('audioFile').click()">
                         ファイルを選択
                     </button>
@@ -261,8 +384,8 @@
             </div>
             <div class="feature">
                 <div class="feature-icon">📱</div>
-                <h3>簡単シェア</h3>
-                <p>URL共有でバイラル拡散</p>
+                <h3>簡単録音</h3>
+                <p>ワンタップ2秒録音機能</p>
             </div>
         </div>
         
@@ -287,14 +410,131 @@
         const estimatedTime = document.getElementById('estimatedTime');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
+        // 録音機能の変数
+        const recordButton = document.getElementById('recordButton');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const countdown = document.getElementById('countdown');
+        let mediaRecorder;
+        let recordedChunks = [];
+        let recordingTimer;
+
         // Page load time tracking for cold start detection
         window.addEventListener('load', function() {
             const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
             if (loadTime > 5000) {
-                // Likely cold start
                 console.log('Cold start detected:', loadTime + 'ms');
             }
         });
+
+        // 録音機能
+        recordButton.addEventListener('click', startRecording);
+
+        async function startRecording() {
+            try {
+                // マイクアクセス要求
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm;codecs=opus'
+                });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    processRecordedAudio();
+                };
+
+                // UI更新
+                recordButton.disabled = true;
+                recordingStatus.style.display = 'block';
+                
+                // カウントダウン開始
+                let timeLeft = 2;
+                countdown.textContent = timeLeft;
+                
+                recordingTimer = setInterval(() => {
+                    timeLeft--;
+                    countdown.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(recordingTimer);
+                    }
+                }, 1000);
+
+                // 録音開始
+                mediaRecorder.start();
+
+                // 2秒後に自動停止
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                    clearInterval(recordingTimer);
+                    recordingStatus.style.display = 'none';
+                    recordButton.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Recording error:', error);
+                showStatus('マイクアクセスが拒否されました。ブラウザ設定を確認してください。', 'error');
+                recordButton.disabled = false;
+                recordingStatus.style.display = 'none';
+            }
+        }
+
+        function processRecordedAudio() {
+            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            
+            // ファイル名生成
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const fileName = `recorded_${timestamp}.webm`;
+            
+            // File オブジェクト作成
+            const file = new File([blob], fileName, { type: 'audio/webm' });
+            
+            // ファイル入力に設定
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            audioFile.files = dataTransfer.files;
+            
+            // UI更新
+            handleFileSelect();
+            showStatus('🎉 2秒録音完了！QRコード生成の準備ができました。', 'success');
+        }
+
+        // ファイル検証関数
+        function validateAudioFile(file) {
+            const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.webm'];
+            const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv'];
+            
+            const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+            const isAudioFile = audioExtensions.includes(extension);
+            const isVideoFile = videoExtensions.includes(extension);
+            
+            if (isVideoFile) {
+                showStatus('動画ファイルが選択されました。音声のみを抽出してQRコード生成します。', 'processing');
+                return true;
+            }
+            
+            if (!isAudioFile && !file.type.startsWith('audio/')) {
+                showStatus('対応していないファイル形式です。音声ファイルまたは動画ファイルを選択してください。', 'error');
+                return false;
+            }
+            
+            return true;
+        }
 
         // ドラッグ&ドロップ機能
         uploadArea.addEventListener('dragover', (e) => {
@@ -321,20 +561,25 @@
         function handleFileSelect() {
             const file = audioFile.files[0];
             if (file) {
+                if (!validateAudioFile(file)) {
+                    audioFile.value = '';
+                    return;
+                }
+
                 fileName.textContent = file.name;
                 const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
                 fileSize.textContent = sizeInMB + ' MB';
                 
                 // 推定処理時間計算
-                const estimatedSeconds = Math.max(10, Math.min(60, Math.ceil(file.size / (1024 * 1024) * 5)));
+                const estimatedSeconds = Math.max(5, Math.min(30, Math.ceil(file.size / (1024 * 1024) * 3)));
                 estimatedTime.textContent = estimatedSeconds + '秒程度';
                 
                 fileInfo.style.display = 'block';
                 generateButton.disabled = false;
                 
                 // ファイルサイズ警告
-                if (file.size > 5 * 1024 * 1024) {
-                    showStatus('ファイルサイズが5MBを超えています。処理できない可能性があります。', 'error');
+                if (file.size > 2 * 1024 * 1024) {
+                    showStatus('ファイルサイズが2MBを超えています。2秒以内に自動カットされます。', 'processing');
                 }
             }
         }
@@ -344,12 +589,7 @@
             
             const file = audioFile.files[0];
             if (!file) {
-                showStatus('ファイルを選択してください', 'error');
-                return;
-            }
-
-            if (file.size > 5 * 1024 * 1024) {
-                showStatus('ファイルサイズが5MBを超えています', 'error');
+                showStatus('ファイルを選択するか、録音してください', 'error');
                 return;
             }
 
@@ -388,6 +628,8 @@
                         errorMessage = 'ファイルが大きすぎます。より短い音声ファイルをお試しください。';
                     } else if (errorMessage.includes('ffmpeg')) {
                         errorMessage = 'サーバーが起動中です。少々お待ちいただき再度お試しください。';
+                    } else if (errorMessage.includes('version')) {
+                        errorMessage = '音声が長すぎます。2秒以内の音声をお試しください。';
                     }
                     
                     showStatus(`エラー: ${errorMessage}`, 'error');
