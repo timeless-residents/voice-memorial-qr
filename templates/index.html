@@ -215,7 +215,9 @@
                     <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
                         対応形式: MP3, M4A, WAV, AAC, OGG, FLAC
                     </p>
-                    <input type="file" id="audioFile" name="audio" accept="audio/*" class="file-input">
+                    <input type="file" id="audioFile" name="audio" 
+       accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4" 
+       class="file-input">
                     <button type="button" class="upload-button" onclick="document.getElementById('audioFile').click()">
                         ファイルを選択
                     </button>
