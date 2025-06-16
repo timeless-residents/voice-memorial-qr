@@ -43,7 +43,7 @@ def process_audio_for_hybrid_qr(audio_file_path, output_duration=1):
             '-af', 'highpass=f=80,lowpass=f=8000',
             '-c:a', 'libopus',
             '-b:a', '1k',
-            ’-ac', '1',
+            '-ac', '1',
             '-ar', '8000',
             '-t', str(output_duration),
             '-y',  # overwrite
