@@ -16,12 +16,12 @@ TEMP_DIR = tempfile.gettempdir()
 
 def process_audio_for_hybrid_qr(audio_file_path, output_duration=3):
     """
-    あなたの実証技術：音声→RAWデータ→URL埋め込み
+    音声→RAWデータ→URL埋め込み用処理
     """
     try:
         unique_id = str(uuid.uuid4())[:8]
         
-        # ffmpeg処理（あなたの検証そのまま）
+        # ffmpeg処理（実証済み技術）
         opus_path = os.path.join(TEMP_DIR, f"processed_{unique_id}.opus")
         
         ffmpeg_cmd = [
@@ -47,8 +47,8 @@ def process_audio_for_hybrid_qr(audio_file_path, output_duration=3):
         # base64エンコード
         encoded_data = base64.b64encode(raw_opus_data).decode('utf-8')
         
-        # URL長制限チェック
-        if len(encoded_data) > 70000:  # Safari余裕をもって
+        # URL長制限チェック（Safari対応）
+        if len(encoded_data) > 70000:
             raise Exception(f"Audio too long for URL embedding: {len(encoded_data)} chars")
         
         # クリーンアップ
@@ -68,7 +68,7 @@ def index():
 @app.route('/generate', methods=['POST'])
 def generate_hybrid_qr():
     """
-    RAWデータ埋め込みURL QRコード生成
+    ハイブリッドQRコード生成
     """
     audio_file_path = None
     try:
@@ -79,7 +79,7 @@ def generate_hybrid_qr():
         if audio_file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # ファイルサイズ制限（5MB）
+        # ファイルサイズ制限
         file_content = audio_file.read()
         if len(file_content) > 5 * 1024 * 1024:
             return jsonify({'error': 'File too large. Max 5MB.'}), 400
@@ -104,13 +104,13 @@ def generate_hybrid_qr():
         
         # URL長最終確認
         if len(hybrid_url) > 80000:
-            return jsonify({'error': f'Generated URL too long: {len(hybrid_url)} chars. Try shorter audio.'}), 400
+            return jsonify({'error': f'Generated URL too long: {len(hybrid_url)} chars'}), 400
         
         # QRコード生成
         qr = qrcode.QRCode(
             version=None,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
-            box_size=4,    # URL用に小さく調整
+            box_size=4,
             border=1,
         )
         
@@ -122,17 +122,14 @@ def generate_hybrid_qr():
         
         # メタデータ付きQRコード
         final_img = create_hybrid_qr(qr_img, {
-            'title': 'Voice Memorial QR - Hybrid Technology',
+            'title': 'Voice Memorial QR',
             'filename': audio_file.filename,
             'raw_size': f"{raw_size} bytes",
             'url_length': f"{len(hybrid_url)} chars",
-            'technology': 'URL + RAW Data Embedding',
-            'compatibility': 'All smartphones',
-            'server_backup': 'Optional fallback',
-            'scan_action': 'Instant Play + Download'
+            'technology': 'URL + RAW Data Hybrid'
         })
         
-        # 画像をバイトストリームに変換
+        # 画像返却
         img_io = io.BytesIO()
         final_img.save(img_io, 'PNG', optimize=True)
         img_io.seek(0)
@@ -141,11 +138,11 @@ def generate_hybrid_qr():
             img_io,
             mimetype='image/png',
             as_attachment=True,
-            download_name=f"voice_hybrid_qr_{Path(audio_file.filename).stem}_{unique_id}.png"
+            download_name=f"voice_qr_{Path(audio_file.filename).stem}_{unique_id}.png"
         )
         
     except Exception as e:
-        return jsonify({'error': f'Hybrid QR generation failed: {str(e)}'}), 500
+        return jsonify({'error': f'Generation failed: {str(e)}'}), 500
     finally:
         if audio_file_path and os.path.exists(audio_file_path):
             os.remove(audio_file_path)
@@ -153,72 +150,57 @@ def generate_hybrid_qr():
 @app.route('/play')
 def play_hybrid():
     """
-    ハイブリッド再生：URLパラメータからRAWデータ直接復元
+    URLパラメータからRAWデータ直接復元・再生
     """
     try:
-        # URLパラメータからRAWデータ取得
         encoded_data = request.args.get('data')
         filename = request.args.get('filename', 'voice_memorial.m4a')
         audio_id = request.args.get('id', 'unknown')
         
         if not encoded_data:
-            return jsonify({'error': 'No audio data in URL parameters'}), 400
+            return jsonify({'error': 'No audio data in URL'}), 400
         
-        # URLデコード
+        # URLデコード → base64デコード → RAW音声復元
         url_decoded_data = urllib.parse.unquote(encoded_data)
-        
-        # base64デコード → RAW音声データ復元
         raw_opus_data = base64.b64decode(url_decoded_data)
         
         # 一時ファイル作成
         unique_id = str(uuid.uuid4())[:8]
-        opus_path = os.path.join(TEMP_DIR, f"url_decoded_{unique_id}.opus")
-        m4a_path = os.path.join(TEMP_DIR, f"url_decoded_{unique_id}.m4a")
+        opus_path = os.path.join(TEMP_DIR, f"decoded_{unique_id}.opus")
+        m4a_path = os.path.join(TEMP_DIR, f"decoded_{unique_id}.m4a")
         
-        # RAWデータをopusファイルとして保存
+        # RAWデータ → opusファイル
         with open(opus_path, 'wb') as f:
             f.write(raw_opus_data)
         
-        # 再生用m4a変換
+        # opus → m4a変換（再生用）
         ffmpeg_cmd = [
             'ffmpeg', '-i', opus_path,
-            '-c:a', 'aac',
-            '-b:a', '128k',
-            '-ar', '44100',
-            '-y',
-            m4a_path
+            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100',
+            '-y', m4a_path
         ]
         
         result = subprocess.run(ffmpeg_cmd, capture_output=True)
-        
         if result.returncode != 0:
             raise Exception("Audio conversion failed")
         
-        # ファイルサイズ確認
-        if not os.path.exists(m4a_path) or os.path.getsize(m4a_path) == 0:
-            raise Exception("Converted audio file is empty")
-        
-        # 音声ファイルを返す
+        # 音声ファイル返却
         return send_file(
             m4a_path,
             mimetype='audio/mp4',
-            as_attachment=False,  # ブラウザで直接再生
-            download_name=f"voice_memorial_{Path(filename).stem}_{audio_id}.m4a"
+            as_attachment=False,
+            download_name=f"voice_memorial_{Path(filename).stem}.m4a"
         )
         
     except Exception as e:
         return f"""
-        <html>
-        <head><title>Voice Memorial - Playback Error</title></head>
-        <body style="font-family: Arial; padding: 50px; text-align: center;">
+        <html><body style="font-family: Arial; padding: 50px; text-align: center;">
             <h1>🚫 音声再生エラー</h1>
             <p>エラー: {str(e)}</p>
-            <p><a href="/">新しい音声QRコードを作成する</a></p>
-        </body>
-        </html>
+            <p><a href="/">新しい音声QRコードを作成</a></p>
+        </body></html>
         """, 500
     finally:
-        # クリーンアップ
         for path_var in ['opus_path', 'm4a_path']:
             if path_var in locals():
                 path = locals()[path_var]
@@ -228,145 +210,44 @@ def play_hybrid():
                     except:
                         pass
 
-@app.route('/info')
-def info_page():
-    """
-    技術情報ページ（オプション）
-    """
-    encoded_data = request.args.get('data', '')
-    filename = request.args.get('filename', 'Unknown')
-    audio_id = request.args.get('id', 'Unknown')
-    
-    try:
-        if encoded_data:
-            url_decoded = urllib.parse.unquote(encoded_data)
-            raw_data = base64.b64decode(url_decoded)
-            data_size = len(raw_data)
-        else:
-            data_size = 0
-        
-        play_url = request.url.replace('/info', '/play')
-        
-        return f"""
-        <html>
-        <head>
-            <title>Voice Memorial - 技術情報</title>
-            <style>
-                body {{ font-family: Arial; margin: 50px; background: #f8f9fa; }}
-                .container {{ max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }}
-                .tech-info {{ background: #e3f2fd; padding: 20px; border-radius: 10px; margin: 20px 0; }}
-                .play-button {{ background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; padding: 20px 40px; border: none; border-radius: 25px; font-size: 1.2em; text-decoration: none; display: inline-block; margin: 20px 0; }}
-                .highlight {{ color: #e74c3c; font-weight: bold; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <h1>🎵 Voice Memorial - ハイブリッド技術</h1>
-                
-                <div class="tech-info">
-                    <h3>🔧 技術仕様</h3>
-                    <p><strong>ファイル名:</strong> {filename}</p>
-                    <p><strong>ID:</strong> {audio_id}</p>
-                    <p><strong>RAWデータサイズ:</strong> {data_size} bytes</p>
-                    <p><strong>URL長:</strong> {len(request.url)} 文字</p>
-                    <p><strong>技術方式:</strong> <span class="highlight">URL + RAWデータ埋め込み</span></p>
-                    <p><strong>サーバー依存:</strong> <span class="highlight">なし（RAWデータ自蔵）</span></p>
-                    <p><strong>永続性:</strong> <span class="highlight">URLが残る限り永続</span></p>
-                </div>
-                
-                <div style="text-align: center;">
-                    <a href="{play_url}" class="play-button">🎵 音声を再生・ダウンロード</a>
-                </div>
-                
-                <div class="tech-info">
-                    <h3>⚡ 革命的技術の特徴</h3>
-                    <ul>
-                        <li>QRコード内に音声RAWデータを完全埋め込み</li>
-                        <li>サーバーダウンでも音声は永続保存</li>
-                        <li>スマートフォンで即座スキャン・再生</li>
-                        <li>URL共有で簡単シェア可能</li>
-                        <li>世界初のハイブリッド音声保存技術</li>
-                    </ul>
-                </div>
-                
-                <div style="text-align: center; margin-top: 30px; color: #666;">
-                    <p>© 2025 Voice Memorial QR - 革命的ハイブリッド音声保存技術</p>
-                    <p><a href="/">新しい音声QRコードを作成する</a></p>
-                </div>
-            </div>
-        </body>
-        </html>
-        """
-        
-    except Exception as e:
-        return f"Error loading info: {str(e)}", 500
-
 def create_hybrid_qr(qr_img, metadata):
     """
-    ハイブリッド技術表示用QRコード
+    ブランド化QRコード生成
     """
     qr_width, qr_height = qr_img.size
-    
-    # レイアウト設計
-    header_height = 120
-    footer_height = 160
-    padding = 15
+    header_height, footer_height, padding = 100, 120, 15
     
     total_width = qr_width + (padding * 2)
     total_height = header_height + qr_height + footer_height + (padding * 3)
     
-    # 新しい画像作成
     final_img = Image.new('RGB', (total_width, total_height), 'white')
+    final_img.paste(qr_img, (padding, header_height + padding))
     
-    # QRコード配置
-    qr_y = header_height + padding
-    final_img.paste(qr_img, (padding, qr_y))
-    
-    # テキスト描画
     draw = ImageDraw.Draw(final_img)
-    
     try:
         font = ImageFont.load_default()
     except:
         font = None
     
     # ヘッダー
-    title = metadata.get('title', 'Voice Memorial Hybrid QR')
-    draw.text((padding, 15), title, fill='#2c3e50', font=font)
-    
-    # 技術的特徴を強調
-    tech_line1 = "⚡ URL + RAW Data Embedded"
-    draw.text((padding, 35), tech_line1, fill='#e74c3c', font=font)
-    
-    tech_line2 = "📱 Instant Scan → Play → Download"
-    draw.text((padding, 55), tech_line2, fill='#27ae60', font=font)
-    
-    tech_line3 = "🔒 Server-Independent + Shareable"
-    draw.text((padding, 75), tech_line3, fill='#8e44ad', font=font)
+    draw.text((padding, 15), metadata.get('title', 'Voice Memorial QR'), fill='#2c3e50', font=font)
+    draw.text((padding, 35), "⚡ URL + RAW Data Hybrid", fill='#e74c3c', font=font)
+    draw.text((padding, 55), "📱 Scan → Instant Play", fill='#27ae60', font=font)
     
     # 区切り線
-    line_y = 100
-    draw.line([(padding, line_y), (total_width - padding, line_y)], fill='#3498db', width=2)
+    draw.line([(padding, 80), (total_width - padding, 80)], fill='#3498db', width=2)
     
-    # フッター情報
-    footer_y = qr_y + qr_height + padding
+    # フッター
+    footer_y = header_height + qr_height + padding * 2
     footer_items = [
-        f"📁 File: {metadata.get('filename', 'Unknown')}",
-        f"💾 Raw: {metadata.get('raw_size', 'Unknown')}",
+        f"📁 {metadata.get('filename', 'Unknown')}",
+        f"💾 {metadata.get('raw_size', 'Unknown')}",
         f"🔗 URL: {metadata.get('url_length', 'Unknown')}",
-        f"🛡️ Tech: {metadata.get('technology', 'Unknown')}",
-        f"📱 Compat: {metadata.get('compatibility', 'Unknown')}",
-        f"⚡ Action: {metadata.get('scan_action', 'Unknown')}",
-        f"🔄 Backup: {metadata.get('server_backup', 'Unknown')}"
+        f"🛡️ Tech: {metadata.get('technology', 'Unknown')}"
     ]
     
     for i, item in enumerate(footer_items):
-        draw.text((padding, footer_y + i * 16), item, fill='#34495e', font=font)
-    
-    # 重要な説明
-    instruction = "📲 Scan → Instant Audio Playback"
-    inst_y = footer_y + len(footer_items) * 16 + 10
-    draw.text((padding, inst_y), instruction, fill='#e67e22', font=font)
+        draw.text((padding, footer_y + i * 18), item, fill='#34495e', font=font)
     
     return final_img
 
@@ -376,16 +257,7 @@ def health_check():
         'status': 'healthy',
         'message': 'Voice Memorial Hybrid QR Service',
         'technology': 'URL + RAW Data Embedding',
-        'advantages': [
-            'Smartphone compatible',
-            'Instant playback',
-            'Server independent',
-            'Easy sharing',
-            'Safari optimized'
-        ],
-        'url_limit': '80,000 chars (Safari)',
-        'audio_limit': '~3 seconds for optimal QR size',
-        'version': '4.0-hybrid-perfected'
+        'version': '4.0-production-ready'
     })
 
 if __name__ == '__main__':
