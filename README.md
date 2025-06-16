@@ -1,46 +1,37 @@
 # voice-memorial-qr
 Revolutionary voice-to-QR technology for eternal memory preservation
 
-# 🎵 Voice Memorial QR - ハイブリッド音声保存技術
+# 🎵 Voice Memorial QR - 世界初ハイブリッド音声保存技術
 
-世界初の URL + RAW データ埋め込みハイブリッド技術で、音声を永続保存
+URL + RAWデータ埋め込みハイブリッド技術による革命的音声永続保存システム
 
-## 🚀 革命的技術
+## 🚀 革命的技術仕様
 
-Voice Memorial QR は、URL パラメータに RAW データを埋め込む世界初のハイブリッド技術により、サーバー不要の音声永続保存を実現します。
+### ハイブリッド音声保存技術
+- **ffmpeg subprocess直接実行**: 高品質音声圧縮
+- **RAWデータ埋め込み**: URLパラメータに音声データ直接格納
+- **サーバー不要永続性**: URLが残る限り音声データも永続
+- **即座再生**: QRスキャン → ブラウザ起動 → 音声再生
 
-### ⚡ ハイブリッド技術の特徴
-
-- **即座再生**: QR スキャン → 自動ブラウザ起動 → 音声再生
-- **永続保存**: RAW データ埋め込みでサーバー不要
-- **簡単シェア**: URL 共有でバイラル拡散
-- **完全対応**: 全スマートフォンで動作
-
-### 🛠 技術仕様
-
+### 技術スタック
+- **バックエンド**: Python Flask + subprocess ffmpeg
 - **音声処理**: FFmpeg (opus 1k 8khz 3sec)
-- **データ埋め込み**: URL + base64 RAW データ
-- **QR コード**: 最適化された高密度 QR 生成
-- **ブラウザ対応**: Safari 80,000 文字 URL 対応
+- **QRコード**: qrcode library (最適化)
+- **フロントエンド**: Vanilla JS (Cold Start対応)
+- **デプロイ**: Render.com Free Tier対応
 
-### 🔧 ローカル開発
+## ⚡ 特徴
 
+- **瞬時再生**: QRスキャン → 自動音声再生
+- **永続保存**: サーバー不要のRAWデータ埋め込み
+- **簡単シェア**: URL共有でバイラル拡散
+- **Cold Start対応**: Free Tierでも最適化されたUX
+
+## 🛠 開発・デプロイ
+
+### ローカル開発
 ```bash
-git clone https://github.com/YOUR_USERNAME/voice-memorial-qr.git
+git clone <repository>
 cd voice-memorial-qr
 pip install -r requirements.txt
 python app.py
-```
-````
-
-### 🌐 デプロイ
-
-Render.com で自動デプロイ対応
-
-### 📄 ライセンス
-
-MIT License
-
----
-
-**© 2025 Voice Memorial QR - 世界初ハイブリッド音声保存技術**
