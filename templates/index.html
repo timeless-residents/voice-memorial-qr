@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Memorial QR - 革命的ハイブリッド音声保存技術</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container { max-width: 800px; margin: 0 auto; padding: 50px 20px; }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p { font-size: 1.2em; opacity: 0.9; }
+        
+        .upload-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+        
+        .file-input { display: none; }
+        
+        .upload-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .upload-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .generate-button {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.2em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .generate-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(17, 153, 142, 0.4);
+        }
+        
+        .generate-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .feature {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .feature-icon { font-size: 3em; margin-bottom: 20px; }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.processing {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            opacity: 0.8;
+        }
+        
+        .tech-highlight {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Voice Memorial QR</h1>
+            <p>世界初のハイブリッド音声保存技術</p>
+            <div class="tech-highlight">
+                <strong>⚡ URL + RAWデータ埋め込み技術</strong><br>
+                スキャン → 即座再生 → 永続保存
+            </div>
+        </div>
+        
+        <div class="upload-section">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">🎤</div>
+                    <h3>音声ファイルをドラッグ&ドロップ</h3>
+                    <p>3秒以内の音声推奨（最適なQRサイズ）</p>
+                    <input type="file" id="audioFile" name="audio" accept="audio/*" class="file-input">
+                    <button type="button" class="upload-button" onclick="document.getElementById('audioFile').click()">
+                        ファイルを選択
+                    </button>
+                </div>
+                
+                <div id="fileInfo" style="margin-top: 20px; display: none;">
+                    <p><strong>選択されたファイル:</strong> <span id="fileName"></span></p>
+                    <p><strong>ファイルサイズ:</strong> <span id="fileSize"></span></p>
+                </div>
+                
+                <button type="submit" class="generate-button" id="generateButton" disabled>
+                    🔄 ハイブリッドQRコードを生成
+                </button>
+                
+                <div id="status" class="status"></div>
+            </form>
+        </div>
+        
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>瞬時再生</h3>
+                <p>QRスキャン → 即座音声再生</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🛡️</div>
+                <h3>サーバー不要</h3>
+                <p>RAWデータ埋め込みで永続保存</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🌍</div>
+                <h3>世界初技術</h3>
+                <p>ハイブリッド音声保存システム</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📱</div>
+                <h3>簡単シェア</h3>
+                <p>URL共有でバイラル拡散</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© 2025 Voice Memorial QR - 革命的ハイブリッド音声保存技術</p>
+            <p>Made with ❤️ by Bounderist Technology</p>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const audioFile = document.getElementById('audioFile');
+        const uploadForm = document.getElementById('uploadForm');
+        const generateButton = document.getElementById('generateButton');
+        const status = document.getElementById('status');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        // ドラッグ&ドロップ機能
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                audioFile.files = files;
+                handleFileSelect();
+            }
+        });
+
+        audioFile.addEventListener('change', handleFileSelect);
+
+        function handleFileSelect() {
+            const file = audioFile.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
+                fileInfo.style.display = 'block';
+                generateButton.disabled = false;
+            }
+        }
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const file = audioFile.files[0];
+            if (!file) {
+                showStatus('ファイルを選択してください', 'error');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                showStatus('ファイルサイズが5MBを超えています', 'error');
+                return;
+            }
+
+            showStatus('ハイブリッドQRコードを生成中...', 'processing');
+            generateButton.disabled = true;
+
+            const formData = new FormData();
+            formData.append('audio', file);
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `voice_qr_${file.name.split('.')[0]}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showStatus('🎉 ハイブリッドQRコードが生成されました！スマートフォンでスキャンして音声を再生してください。', 'success');
+                } else {
+                    const error = await response.json();
+                    showStatus(`エラー: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`エラー: ${error.message}`, 'error');
+            } finally {
+                generateButton.disabled = false;
+            }
+        });
+
+        function showStatus(message, type) {
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 8000);
+            }
+        }
+    </script>
+</body>
+</html>
