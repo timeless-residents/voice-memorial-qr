@@ -23,7 +23,7 @@ def check_ffmpeg():
     except:
         return False
 
-def process_audio_for_hybrid_qr(audio_file_path, output_duration=1):
+def process_audio_for_hybrid_qr(audio_file_path, output_duration=2.5):
     """
     音声→RAWデータ→URL埋め込み用処理（subprocess直接実行版）
     """
