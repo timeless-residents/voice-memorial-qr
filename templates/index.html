@@ -336,10 +336,10 @@
                     <h3>音声ファイルをドラッグ&ドロップ</h3>
                     <p>2秒以内の音声推奨（最適なQRサイズ）</p>
                     <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                        対応形式: MP3, M4A, WAV, AAC, OGG, FLAC, WebM
+                        対応形式: MP3, M4A, WAV, AAC, OGG, FLAC
                     </p>
                     <input type="file" id="audioFile" name="audio" 
-                           accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4,.webm" 
+                           accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.ogg,.flac,.mp4" 
                            class="file-input">
                     <button type="button" class="upload-button" onclick="document.getElementById('audioFile').click()">
                         ファイルを選択
@@ -442,9 +442,19 @@
                 });
 
                 recordedChunks = [];
-                mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: 'audio/webm;codecs=opus'
-                });
+                
+                // サーバー対応形式を優先して試行
+                let mimeType = 'audio/wav';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    // WAVが使えない場合はMP3を試行
+                    mimeType = 'audio/mp3';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        // 最後の手段としてWebM
+                        mimeType = 'audio/webm;codecs=opus';
+                    }
+                }
+                
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -495,14 +505,26 @@
         }
 
         function processRecordedAudio() {
-            const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+            const mimeType = mediaRecorder.mimeType;
+            const blob = new Blob(recordedChunks, { type: mimeType });
             
-            // ファイル名生成
+            // ファイル名と拡張子を適切に設定
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const fileName = `recorded_${timestamp}.webm`;
+            let extension = '.wav';
+            let fileType = 'audio/wav';
+            
+            if (mimeType.includes('webm')) {
+                extension = '.webm';
+                fileType = 'audio/webm';
+            } else if (mimeType.includes('mp3')) {
+                extension = '.mp3';
+                fileType = 'audio/mp3';
+            }
+            
+            const fileName = `recorded_${timestamp}${extension}`;
             
             // File オブジェクト作成
-            const file = new File([blob], fileName, { type: 'audio/webm' });
+            const file = new File([blob], fileName, { type: fileType });
             
             // ファイル入力に設定
             const dataTransfer = new DataTransfer();
@@ -516,7 +538,7 @@
 
         // ファイル検証関数
         function validateAudioFile(file) {
-            const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac', '.webm'];
+            const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'];
             const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv'];
             
             const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
