@@ -357,9 +357,9 @@ def create_hybrid_qr(qr_img, metadata):
     draw.text((padding, 15), title, fill='#2c3e50', font=font)
     
     # 技術的特徴強調
-    draw.text((padding, 35), "⚡ URL + RAW Data Hybrid Technology", fill='#e74c3c', font=font)
-    draw.text((padding, 55), "📱 Scan → Instant Play & Download", fill='#27ae60', font=font)
-    draw.text((padding, 75), "🛡️ Server-Independent Permanence", fill='#8e44ad', font=font)
+    draw.text((padding, 35), "URL + RAW Data Hybrid Technology", fill='#e74c3c', font=font)
+    draw.text((padding, 55), "Scan → Instant Play & Download", fill='#27ae60', font=font)
+    draw.text((padding, 75), "Server-Independent Permanence", fill='#8e44ad', font=font)
     
     # 区切り線
     line_y = 95
@@ -368,12 +368,12 @@ def create_hybrid_qr(qr_img, metadata):
     # フッター情報
     footer_y = qr_y + qr_height + padding
     footer_items = [
-        f"📁 File: {metadata.get('filename', 'Unknown')}",
-        f"🆔 ID: {metadata.get('id', 'Unknown')}",
-        f"💾 Raw: {metadata.get('raw_size', 'Unknown')}",
-        f"🔗 URL: {metadata.get('url_length', 'Unknown')}",
-        f"🛡️ Tech: {metadata.get('technology', 'Unknown')}",
-        f"📲 Action: Scan for instant playback"
+        f"File: {metadata.get('filename', 'Unknown')}",
+        f"ID: {metadata.get('id', 'Unknown')}",
+        f"Raw: {metadata.get('raw_size', 'Unknown')}",
+        f"URL: {metadata.get('url_length', 'Unknown')}",
+        f"Tech: {metadata.get('technology', 'Unknown')}",
+        f"Action: Scan for instant playback"
     ]
     
     for i, item in enumerate(footer_items):
