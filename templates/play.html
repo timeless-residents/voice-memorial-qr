@@ -416,24 +416,24 @@
     {% endif %}
 
     <script>
-        // 🎯 モード判定とデータ準備
-        {% if direct_audio %}
-        // iPhone標準カメラ直接再生モード
-        const directAudio = '{{ direct_audio }}';
-        const mode = 'direct';
-        console.log('[Pearl Memorial] 📱 iPhone直接再生モード');
-        {% elif pearl_data %}
-        // Reader経由メタデータ付きモード
-        const pearlData = {{ pearl_data | safe }};
-        const mode = 'metadata';
-        console.log('[Pearl Memorial] 🔧 Reader フル機能モード');
-        {% else %}
-        // エラーモード
-        const mode = 'error';
-        console.log('[Pearl Memorial] ❌ エラーモード');
-        {% endif %}
+        // 🎯 サーバーからのデータ注入（Jinja2で事前処理）
+        const appData = {
+            mode: '{{ mode or "error" }}',
+            directAudio: {{ direct_audio | tojson if direct_audio else 'null' }},
+            pearlData: {{ pearl_data | tojson if pearl_data else 'null' }},
+            title: {{ title | tojson if title else '"Pearl Memorial"' }}
+        };
         
-        {% if direct_audio or pearl_data %}
+        console.log('[Pearl Memorial] Mode:', appData.mode);
+        console.log('[Pearl Memorial] Data loaded:', appData);
+        
+        // モード判定
+        if (appData.mode === 'error') {
+            console.log('[Pearl Memorial] ❌ エラーモード');
+            return; // エラー時は処理終了
+        }
+        
+        // 音声処理用変数
         let audioContext = null;
         let currentSource = null;
         let audioBuffer = null;
@@ -454,7 +454,7 @@
         
         // ログ関数
         function log(message) {
-            console.log(`[Pearl Memorial ${mode.toUpperCase()}]`, message);
+            console.log(`[Pearl Memorial ${appData.mode.toUpperCase()}]`, message);
         }
         
         // ステータス更新
@@ -476,7 +476,7 @@
         
         // メタデータ情報表示（Reader モードのみ）
         function showMetadataInfo(data) {
-            if (mode !== 'metadata' || !metadataInfo) return;
+            if (appData.mode !== 'metadata' || !metadataInfo) return;
             
             const metadata = data.metadata || {};
             metadataInfo.innerHTML = `
@@ -492,7 +492,7 @@
         
         // プログレスバー更新（Reader モードのみ）
         function updateProgress() {
-            if (mode !== 'metadata' || !isPlaying || !audioBuffer || !progressBar) return;
+            if (appData.mode !== 'metadata' || !isPlaying || !audioBuffer || !progressBar) return;
             
             const currentTime = audioContext.currentTime - startTime;
             const progress = Math.min(currentTime / audioBuffer.duration * 100, 100);
@@ -528,10 +528,10 @@
                 let audioDataUri;
                 let title;
                 
-                if (mode === 'direct') {
+                if (appData.mode === 'direct') {
                     // 🎯 iPhone直接再生モード
-                    audioDataUri = directAudio;
-                    title = 'Pearl Memorial - 直接再生';
+                    audioDataUri = appData.directAudio;
+                    title = appData.title || 'Pearl Memorial - 直接再生';
                     
                     if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
                         throw new Error('無効な音声データURIです');
@@ -539,8 +539,9 @@
                     
                     log('Direct audio mode initialized');
                     
-                } else if (mode === 'metadata') {
+                } else if (appData.mode === 'metadata') {
                     // 🔧 Reader メタデータモード
+                    const pearlData = appData.pearlData;
                     if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
                         throw new Error('無効なPearl Memorial形式です');
                     }
@@ -619,13 +620,13 @@
                 stopButton.style.display = 'inline-block';
                 
                 // プログレスバー表示（Reader モードのみ）
-                if (mode === 'metadata' && progressBar) {
+                if (appData.mode === 'metadata' && progressBar) {
                     progressBar.style.display = 'block';
                     updateProgress();
                 }
                 
-                const title = mode === 'metadata' ? 
-                              (pearlData.metadata?.title || 'Pearl Memorial') : 
+                const title = appData.mode === 'metadata' ? 
+                              (appData.pearlData.metadata?.title || 'Pearl Memorial') : 
                               'Pearl Memorial - 直接再生';
                               
                 updateStatus(`🎵 再生中: ${title}`, 'playing');
@@ -669,8 +670,8 @@
                 progressFill.style.width = '0%';
             }
             
-            const title = mode === 'metadata' ? 
-                          (pearlData.metadata?.title || 'Pearl Memorial') : 
+            const title = appData.mode === 'metadata' ? 
+                          (appData.pearlData.metadata?.title || 'Pearl Memorial') : 
                           'Pearl Memorial - 直接再生';
                           
             updateStatus(`✅ 再生完了: ${title}`, 'success');
@@ -704,16 +705,18 @@
         
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            log(`Pearl Memorial Play page loaded in ${mode} mode`);
-            prepareAudio();
+            log(`Pearl Memorial Play page loaded in ${appData.mode} mode`);
+            if (appData.mode !== 'error') {
+                prepareAudio();
+            }
         });
         
-        {% else %}
         // エラー時の処理
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('Pearl Memorial Play page loaded with error');
-        });
-        {% endif %}
+        if (appData.mode === 'error') {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('Pearl Memorial Play page loaded with error');
+            });
+        }
     </script>
 </body>
 </html>
