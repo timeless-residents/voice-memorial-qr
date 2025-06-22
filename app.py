@@ -223,7 +223,7 @@ def add_qr_metadata(qr_img, metadata):
     return final_img
 
 def get_index_html():
-    """HTMLテンプレートを安全に返す"""
+    """HTMLテンプレートを安全に返す（録音機能付き）"""
     html_content = """<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -260,6 +260,68 @@ def get_index_html():
             padding: 40px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             margin-bottom: 30px;
+        }
+        .recording-section {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .record-button {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            padding: 20px 40px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.2em;
+            cursor: pointer;
+            width: 100%;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .record-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
+        }
+        .record-button:disabled {
+            opacity: 0.6;
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .recording-status {
+            margin: 20px 0;
+        }
+        .recording-indicator {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        .divider {
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+        }
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: #ddd;
+        }
+        .divider span {
+            background: white;
+            padding: 0 20px;
+            color: #666;
+            font-weight: bold;
         }
         .upload-area {
             border: 3px dashed #667eea;
@@ -327,6 +389,12 @@ def get_index_html():
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        @media (max-width: 768px) {
+            .record-button {
+                font-size: 1.4em;
+                padding: 25px 20px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -338,6 +406,21 @@ def get_index_html():
         
         <div class="upload-section">
             <form id="uploadForm" enctype="multipart/form-data">
+                
+                <!-- 録音機能セクション -->
+                <div class="recording-section">
+                    <button type="button" class="record-button" id="recordButton">
+                        🎤 2秒録音
+                    </button>
+                    <div id="recordingStatus" class="recording-status" style="display: none;">
+                        <div class="recording-indicator">🔴 録音中... <span id="countdown">2</span></div>
+                    </div>
+                </div>
+
+                <div class="divider">
+                    <span>または</span>
+                </div>
+                
                 <div class="upload-area" id="uploadArea">
                     <h3>音声ファイルをドラッグ&ドロップまたは選択</h3>
                     <p>対応形式: MP3, WAV, M4A, OGG, FLAC, MP4, MOV, WebM</p>
@@ -378,6 +461,110 @@ def get_index_html():
         const generateButton = document.getElementById('generateButton');
         const status = document.getElementById('status');
         const loadingIndicator = document.getElementById('loadingIndicator');
+        const recordButton = document.getElementById('recordButton');
+        const recordingStatus = document.getElementById('recordingStatus');
+        const countdown = document.getElementById('countdown');
+        
+        let mediaRecorder;
+        let recordedChunks = [];
+        let recordingTimer;
+
+        // 録音機能
+        recordButton.addEventListener('click', startRecording);
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 44100
+                    }
+                });
+
+                recordedChunks = [];
+                
+                let mimeType = 'audio/wav';
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    mimeType = 'audio/webm;codecs=opus';
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        mimeType = 'audio/mp4';
+                    }
+                }
+                
+                mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    processRecordedAudio();
+                };
+
+                recordButton.disabled = true;
+                recordingStatus.style.display = 'block';
+                
+                let timeLeft = 2;
+                countdown.textContent = timeLeft;
+                
+                recordingTimer = setInterval(() => {
+                    timeLeft--;
+                    countdown.textContent = timeLeft;
+                    if (timeLeft <= 0) {
+                        clearInterval(recordingTimer);
+                    }
+                }, 1000);
+
+                mediaRecorder.start();
+
+                setTimeout(() => {
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
+                    clearInterval(recordingTimer);
+                    recordingStatus.style.display = 'none';
+                    recordButton.disabled = false;
+                }, 2000);
+
+            } catch (error) {
+                console.error('Recording error:', error);
+                showStatus('マイクアクセスが拒否されました。ブラウザ設定を確認してください。', 'error');
+                recordButton.disabled = false;
+                recordingStatus.style.display = 'none';
+            }
+        }
+
+        function processRecordedAudio() {
+            const mimeType = mediaRecorder.mimeType;
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            let extension = '.wav';
+            let fileType = 'audio/wav';
+            
+            if (mimeType.includes('webm')) {
+                extension = '.webm';
+                fileType = 'audio/webm';
+            } else if (mimeType.includes('mp4')) {
+                extension = '.m4a';
+                fileType = 'audio/mp4';
+            }
+            
+            const fileName = 'pearl_recorded_' + timestamp + extension;
+            const file = new File([blob], fileName, { type: fileType });
+            
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            audioFile.files = dataTransfer.files;
+            
+            generateButton.disabled = false;
+            showStatus('🎉 2秒録音完了！QRコード生成の準備ができました。', 'success');
+        }
 
         audioFile.addEventListener('change', function() {
             const file = this.files[0];
@@ -392,7 +579,7 @@ def get_index_html():
             
             const file = audioFile.files[0];
             if (!file) {
-                showStatus('ファイルを選択してください', 'error');
+                showStatus('ファイルを選択するか、録音してください', 'error');
                 return;
             }
 
@@ -420,7 +607,7 @@ def get_index_html():
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                     
-                    showStatus('QRコードが生成されました！', 'success');
+                    showStatus('🎉 Pearl Memorial QRコードが生成されました！', 'success');
                 } else {
                     const error = await response.json();
                     showStatus('エラー: ' + (error.error || 'Unknown error'), 'error');
