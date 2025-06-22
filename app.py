@@ -138,7 +138,7 @@ def process_audio_for_standalone_qr(audio_file_path, output_duration=2.0):
 
 @app.route('/')
 def index():
-    return render_template('index_standalone.html')
+    return render_template('index.html')
 
 @app.route('/generate', methods=['POST'])
 def generate_standalone_qr():
