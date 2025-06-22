@@ -5,19 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>Pearl Memorial QR - 完全自立型音声保存技術</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
         
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
+            -webkit-text-size-adjust: 100%;
         }
         
-        .container { max-width: 800px; margin: 0 auto; padding: 50px 20px; }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 50px 20px;
+        }
         
         .header {
             text-align: center;
@@ -29,9 +38,22 @@
             font-size: 3em;
             margin-bottom: 20px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
         }
         
-        .header p { font-size: 1.2em; opacity: 0.9; }
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .tech-highlight {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
         
         .tech-notice {
             background: rgba(255,255,255,0.95);
@@ -40,6 +62,7 @@
             margin: 20px 0;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             border-left: 5px solid #27ae60;
+            color: #333;
         }
         
         .upload-section {
@@ -49,13 +72,12 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
             margin-bottom: 30px;
         }
-
-        /* 録音機能のスタイル */
+        
         .recording-section {
             margin-bottom: 30px;
             text-align: center;
         }
-
+        
         .record-button {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
             color: white;
@@ -63,27 +85,36 @@
             border: none;
             border-radius: 25px;
             font-size: 1.2em;
+            font-weight: 600;
             cursor: pointer;
             width: 100%;
             margin-bottom: 20px;
             transition: all 0.3s ease;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+            user-select: none;
         }
-
+        
         .record-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3);
         }
-
+        
+        .record-button:active {
+            transform: scale(0.98);
+        }
+        
         .record-button:disabled {
             opacity: 0.6;
             background: #95a5a6;
             cursor: not-allowed;
+            transform: none;
         }
-
+        
         .recording-status {
             margin: 20px 0;
         }
-
+        
         .recording-indicator {
             background: #e74c3c;
             color: white;
@@ -93,19 +124,19 @@
             font-weight: bold;
             animation: pulse 1s infinite;
         }
-
+        
         @keyframes pulse {
             0% { opacity: 1; }
             50% { opacity: 0.7; }
             100% { opacity: 1; }
         }
-
+        
         .divider {
             text-align: center;
             margin: 30px 0;
             position: relative;
         }
-
+        
         .divider::before {
             content: '';
             position: absolute;
@@ -115,7 +146,7 @@
             height: 1px;
             background: #ddd;
         }
-
+        
         .divider span {
             background: white;
             padding: 0 20px;
@@ -143,7 +174,14 @@
             transform: scale(1.02);
         }
         
-        .file-input { display: none; }
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+        }
+        
+        .file-input { 
+            display: none; 
+        }
         
         .upload-button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -155,11 +193,25 @@
             cursor: pointer;
             transition: transform 0.3s ease;
             margin-top: 20px;
+            -webkit-appearance: none;
+            touch-action: manipulation;
         }
         
         .upload-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .upload-button:active {
+            transform: scale(0.98);
+        }
+        
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
         }
         
         .generate-button {
@@ -169,10 +221,13 @@
             border: none;
             border-radius: 30px;
             font-size: 1.2em;
+            font-weight: 600;
             cursor: pointer;
             width: 100%;
             margin-top: 30px;
             transition: all 0.3s ease;
+            -webkit-appearance: none;
+            touch-action: manipulation;
         }
         
         .generate-button:hover {
@@ -180,67 +235,14 @@
             box-shadow: 0 15px 30px rgba(17, 153, 142, 0.4);
         }
         
+        .generate-button:active {
+            transform: scale(0.98);
+        }
+        
         .generate-button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            margin-top: 50px;
-        }
-        
-        .feature {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        
-        .feature-icon { font-size: 3em; margin-bottom: 20px; }
-        
-        .status {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            display: none;
-        }
-        
-        .status.success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status.error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .status.processing {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-        
-        .footer {
-            text-align: center;
-            color: white;
-            margin-top: 50px;
-            opacity: 0.8;
-        }
-        
-        .tech-highlight {
-            background: rgba(255,255,255,0.1);
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
         }
         
         .loading-indicator {
@@ -263,37 +265,98 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        .reader-info {
-            background: rgba(255,255,255,0.95);
-            padding: 20px;
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            font-weight: 600;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.processing {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        
+        .feature {
+            background: white;
+            padding: 30px;
             border-radius: 15px;
-            margin: 20px 0;
+            text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-left: 5px solid #3498db;
-        }
-
-        .reader-button {
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.1em;
-            cursor: pointer;
             transition: transform 0.3s ease;
-            margin: 10px 5px;
-            text-decoration: none;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon { 
+            font-size: 3em; 
+            margin-bottom: 20px; 
+        }
+        
+        .feature h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 50px;
+            opacity: 0.8;
+        }
+        
+        .reader-link {
             display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            margin-top: 30px;
+            transition: all 0.3s ease;
+            font-weight: 600;
         }
-
-        .reader-button:hover {
+        
+        .reader-link:hover {
+            background: rgba(255,255,255,0.3);
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
         }
-
+        
         /* モバイル対応 */
         @media (max-width: 768px) {
+            .container {
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 2.5em;
+            }
+            
             .record-button {
                 font-size: 1.4em;
                 padding: 25px 20px;
@@ -303,33 +366,9 @@
                 padding: 40px 20px;
             }
             
-            .container {
-                padding: 20px 15px;
-            }
-
-            .header h1 {
-                font-size: 2.5em;
-            }
-
-            .reader-button {
-                display: block;
-                margin: 10px 0;
-                text-align: center;
-            }
-        }
-
-        /* タッチデバイス用 */
-        @media (hover: none) and (pointer: coarse) {
-            .record-button:active {
-                transform: scale(0.95);
-            }
-            
-            .upload-button:active {
-                transform: scale(0.95);
-            }
-
-            .reader-button:active {
-                transform: scale(0.95);
+            .features {
+                grid-template-columns: 1fr;
+                gap: 20px;
             }
         }
     </style>
@@ -337,7 +376,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎵 Pearl Memorial QR</h1>
+            <h1>🐚 Pearl Memorial QR</h1>
             <p>完全自立型音声保存技術</p>
             <div class="tech-highlight">
                 <strong>🚀 Server-Independent DataURI Technology</strong><br>
@@ -350,22 +389,6 @@
             <p><strong>QR生成</strong>: サーバーで音声処理・圧縮・DataURI埋め込み</p>
             <p><strong>QR再生</strong>: 完全オフライン・サーバー不要・1000年保証</p>
             <p><strong>機内モード</strong>でも再生可能な世界初技術です。</p>
-        </div>
-
-        <div class="reader-info">
-            <h3>📱 Pearl Memorial Reader アプリ</h3>
-            <p>生成されたQRコードを読み取るには、専用の読み取りアプリが必要です。</p>
-            <div style="text-align: center; margin-top: 15px;">
-                <a href="/reader" class="reader-button" target="_blank">
-                    📱 読み取りアプリを開く
-                </a>
-                <button class="reader-button" onclick="downloadReaderApp()">
-                    💾 読み取りアプリをダウンロード
-                </button>
-            </div>
-            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">
-                読み取りアプリは完全オフライン動作・PWA対応・ホーム画面追加可能です。
-            </p>
         </div>
         
         <div class="upload-section">
@@ -401,7 +424,7 @@
                     </button>
                 </div>
                 
-                <div id="fileInfo" style="margin-top: 20px; display: none;">
+                <div id="fileInfo" class="file-info">
                     <p><strong>選択されたファイル:</strong> <span id="fileName"></span></p>
                     <p><strong>ファイルサイズ:</strong> <span id="fileSize"></span></p>
                     <p><strong>推定処理時間:</strong> <span id="estimatedTime"></span></p>
@@ -419,6 +442,12 @@
                 
                 <div id="status" class="status"></div>
             </form>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="/reader" class="reader-link">
+                📱 Pearl Memorial Reader を開く
+            </a>
         </div>
         
         <div class="features">
@@ -454,6 +483,7 @@
     </div>
 
     <script>
+        // グローバル変数
         const uploadArea = document.getElementById('uploadArea');
         const audioFile = document.getElementById('audioFile');
         const uploadForm = document.getElementById('uploadForm');
@@ -464,52 +494,23 @@
         const fileSize = document.getElementById('fileSize');
         const estimatedTime = document.getElementById('estimatedTime');
         const loadingIndicator = document.getElementById('loadingIndicator');
-
-        // 録音機能の変数
         const recordButton = document.getElementById('recordButton');
         const recordingStatus = document.getElementById('recordingStatus');
         const countdown = document.getElementById('countdown');
+        
         let mediaRecorder;
         let recordedChunks = [];
         let recordingTimer;
 
-        // Page load time tracking
-        window.addEventListener('load', function() {
-            const loadTime = performance.timing.loadEventEnd - performance.timing.navigationStart;
-            if (loadTime > 5000) {
-                console.log('Server startup detected:', loadTime + 'ms');
-            }
-        });
-
-        // 読み取りアプリダウンロード機能
-        async function downloadReaderApp() {
-            try {
-                const response = await fetch('/reader');
-                const html = await response.text();
-                
-                const blob = new Blob([html], { type: 'text/html' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'pearl-memorial-reader.html';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-                
-                showStatus('🎉 Pearl Memorial Reader アプリをダウンロードしました！', 'success');
-            } catch (error) {
-                console.error('Download error:', error);
-                showStatus('ダウンロードエラーが発生しました。', 'error');
-            }
-        }
-
         // 録音機能
         recordButton.addEventListener('click', startRecording);
+        recordButton.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            startRecording();
+        });
 
         async function startRecording() {
             try {
-                // マイクアクセス要求
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     audio: {
                         echoCancellation: true,
@@ -521,7 +522,6 @@
 
                 recordedChunks = [];
                 
-                // サーバー対応形式を優先して試行
                 let mimeType = 'audio/wav';
                 if (!MediaRecorder.isTypeSupported(mimeType)) {
                     mimeType = 'audio/webm;codecs=opus';
@@ -543,11 +543,9 @@
                     processRecordedAudio();
                 };
 
-                // UI更新
                 recordButton.disabled = true;
                 recordingStatus.style.display = 'block';
                 
-                // カウントダウン開始
                 let timeLeft = 2;
                 countdown.textContent = timeLeft;
                 
@@ -559,10 +557,8 @@
                     }
                 }, 1000);
 
-                // 録音開始
                 mediaRecorder.start();
 
-                // 2秒後に自動停止
                 setTimeout(() => {
                     if (mediaRecorder.state === 'recording') {
                         mediaRecorder.stop();
@@ -584,7 +580,6 @@
             const mimeType = mediaRecorder.mimeType;
             const blob = new Blob(recordedChunks, { type: mimeType });
             
-            // ファイル名と拡張子を適切に設定
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             let extension = '.wav';
             let fileType = 'audio/wav';
@@ -597,22 +592,18 @@
                 fileType = 'audio/mp4';
             }
             
-            const fileName = `pearl_recorded_${timestamp}${extension}`;
+            const recordedFileName = `pearl_recorded_${timestamp}${extension}`;
+            const file = new File([blob], recordedFileName, { type: fileType });
             
-            // File オブジェクト作成
-            const file = new File([blob], fileName, { type: fileType });
-            
-            // ファイル入力に設定
             const dataTransfer = new DataTransfer();
             dataTransfer.items.add(file);
             audioFile.files = dataTransfer.files;
             
-            // UI更新
             handleFileSelect();
             showStatus('🎉 2秒録音完了！完全自立型QRコード生成の準備ができました。', 'success');
         }
 
-        // ファイル検証関数
+        // ファイル検証
         function validateAudioFile(file) {
             const audioExtensions = ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'];
             const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
@@ -668,20 +659,19 @@
                 const sizeInMB = (file.size / 1024 / 1024).toFixed(2);
                 fileSize.textContent = sizeInMB + ' MB';
                 
-                // 推定処理時間計算
                 const estimatedSeconds = Math.max(5, Math.min(30, Math.ceil(file.size / (1024 * 1024) * 3)));
                 estimatedTime.textContent = estimatedSeconds + '秒程度';
                 
                 fileInfo.style.display = 'block';
                 generateButton.disabled = false;
                 
-                // ファイルサイズ警告
                 if (file.size > 2 * 1024 * 1024) {
                     showStatus('ファイルサイズが2MBを超えています。2秒以内に自動カットされます。', 'processing');
                 }
             }
         }
 
+        // フォーム送信
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -691,7 +681,6 @@
                 return;
             }
 
-            // UI状態更新
             generateButton.disabled = true;
             loadingIndicator.style.display = 'block';
             showStatus('完全自立型QRコード生成中...', 'processing');
@@ -721,7 +710,6 @@
                     const error = await response.json();
                     let errorMessage = error.error || 'Unknown error';
                     
-                    // エラーメッセージの改善
                     if (errorMessage.includes('timeout')) {
                         errorMessage = 'ファイルが大きすぎます。より短い音声ファイルをお試しください。';
                     } else if (errorMessage.includes('ffmpeg')) {
@@ -757,68 +745,10 @@
             }
         }
 
-        // サービス状態チェック（エラーハンドリング強化版）
-        let healthCheckAttempts = 0;
-        const maxHealthCheckAttempts = 6;
-
-        async function checkServiceHealth() {
-            if (healthCheckAttempts >= maxHealthCheckAttempts) {
-                showStatus('サーバー起動完了まで時間がかかっています。録音機能はご利用いただけます。', 'processing');
-                return;
-            }
-            
-            healthCheckAttempts++;
-            console.log(`Health check attempt ${healthCheckAttempts}/${maxHealthCheckAttempts}`);
-            
-            try {
-                const response = await fetch('/health', { 
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                    timeout: 5000
-                });
-                
-                // Content-Typeチェック（JSON形式かどうか）
-                const contentType = response.headers.get('Content-Type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    throw new Error('Server returning HTML (still starting)');
-                }
-                
-                const health = await response.json();
-                console.log('✅ Service ready:', health);
-                
-                if (health.ffmpeg_available) {
-                    console.log('Pearl Memorial Generator Ready:', health.version);
-                    // 成功時は既存のメッセージを維持
-                } else {
-                    showStatus('⚠️ 音声処理機能準備中...再度お試しください。', 'processing');
-                    // FFmpegが使えない場合は少し待ってリトライ
-                    setTimeout(checkServiceHealth, 15000);
-                }
-            } catch (error) {
-                console.log(`Attempt ${healthCheckAttempts}: ${error.message}`);
-                
-                // JSON parseエラーは正常（サーバー起動中）
-                if (error.message.includes('Unexpected token') || 
-                    error.message.includes('HTML') ||
-                    error.message.includes('JSON')) {
-                    console.log('Server still starting (expected during cold start)');
-                }
-                
-                if (healthCheckAttempts < maxHealthCheckAttempts) {
-                    const nextAttemptSeconds = 20;
-                    setTimeout(checkServiceHealth, nextAttemptSeconds * 1000);
-                }
-            }
-        }
-
-        // ページロード後にヘルスチェック実行（段階的）
-        setTimeout(checkServiceHealth, 3000);
-
-        // 初期メッセージ
+        // 初期化
         document.addEventListener('DOMContentLoaded', () => {
             showStatus('🚀 Pearl Memorial Generator 準備完了！完全自立型QRコードを生成できます。', 'processing');
             
-            // 3秒後に自動消去
             setTimeout(() => {
                 if (status.classList.contains('processing')) {
                     status.style.display = 'none';
