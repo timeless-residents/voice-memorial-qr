@@ -767,7 +767,7 @@
                                 </button>
                             </div>
                             <div id="locationStatus" class="location-status">
-                                位置情報を取得すると、聖地認証や宇宙エネルギーレベルが自動判定されます
+                                位置情報を取得すると、記録場所の情報が自動で追加されます
                             </div>
                             <div id="locationInfo" class="location-info" style="display: none;">
                                 <!-- 位置情報が取得されると表示 -->
@@ -1226,7 +1226,7 @@
                     
                     console.log('Location obtained:', coords);
                     
-                    // 住所取得と聖地判定
+                    // 住所取得と地域判定
                     await processLocation(coords);
                     
                 } catch (error) {
@@ -1257,28 +1257,28 @@
                     // 住所取得（逆ジオコーディング）
                     const address = await reverseGeocode(coords.latitude, coords.longitude);
                     
-                    // 聖地判定
-                    const sacredSite = detectSacredSite(coords.latitude, coords.longitude);
+                    // 地域判定
+                    const specialArea = detectSacredSite(coords.latitude, coords.longitude);
                     
-                    // 宇宙エネルギー計算
-                    const cosmicEnergy = calculateCosmicEnergy(coords.latitude, coords.longitude);
+                    // 記録品質計算
+                    const qualityScore = calculateQualityScore(coords.latitude, coords.longitude);
                     
                     // 位置情報データ作成
                     locationData = {
                         coords: [coords.latitude, coords.longitude],
                         accuracy: coords.accuracy,
                         address: address,
-                        sacred_site: sacredSite.id,
-                        sacred_site_name: sacredSite.name,
-                        distance_to_sacred: sacredSite.distance,
-                        cosmic_energy_level: cosmicEnergy.level,
+                        special_area: specialArea.id,
+                        area_name: specialArea.name,
+                        distance_to_area: specialArea.distance,
+                        quality_score: qualityScore.quality,
                         recording_time: new Date().toISOString(),
                         moon_phase: getMoonPhase(),
-                        seasonal_energy: getSeasonalEnergy()
+                        seasonal_info: getSeasonalInfo()
                     };
                     
                     // UI更新
-                    locationStatus.textContent = '✅ 位置情報取得完了！聖地認証とエネルギーレベルが判定されました';
+                    locationStatus.textContent = '✅ 位置情報取得完了！記録場所の詳細情報が追加されました';
                     locationStatus.className = 'location-status success';
                     locationToggle.textContent = '✅ 取得完了';
                     locationToggle.disabled = true;
@@ -1315,30 +1315,30 @@
             
             // 聖地判定
             function detectSacredSite(lat, lng) {
-                const sacredSites = [
-                    { id: 'fuji_san', name: '富士山聖地エリア', lat: 35.3606, lng: 138.7274, radius: 50000 },
-                    { id: 'haleakala', name: 'ハレアカラ聖地エリア', lat: 20.7097, lng: -156.2533, radius: 30000 },
-                    { id: 'ship_bridge_sanbanze', name: '船橋三番瀬聖地エリア', lat: 35.6544, lng: 139.8939, radius: 10000 },
-                    { id: 'tokyo_imperial', name: '皇居聖地エリア', lat: 35.6852, lng: 139.7528, radius: 5000 },
-                    { id: 'nikko_toshogu', name: '日光東照宮聖地エリア', lat: 36.7580, lng: 139.5991, radius: 15000 }
+                const specialAreas = [
+                    { id: 'fuji_area', name: '富士山エリア', lat: 35.3606, lng: 138.7274, radius: 50000 },
+                    { id: 'maui_area', name: 'マウイ島エリア', lat: 20.7097, lng: -156.2533, radius: 30000 },
+                    { id: 'tokyo_bay_area', name: '東京湾エリア', lat: 35.6544, lng: 139.8939, radius: 10000 },
+                    { id: 'tokyo_center', name: '東京都心エリア', lat: 35.6852, lng: 139.7528, radius: 5000 },
+                    { id: 'nikko_area', name: '日光エリア', lat: 36.7580, lng: 139.5991, radius: 15000 }
                 ];
                 
-                let nearestSite = { id: 'general', name: '一般エリア', distance: '未測定' };
+                let nearestArea = { id: 'general', name: '一般エリア', distance: '位置情報なし' };
                 let minDistance = Infinity;
                 
-                for (const site of sacredSites) {
-                    const distance = calculateDistance(lat, lng, site.lat, site.lng);
-                    if (distance < site.radius && distance < minDistance) {
+                for (const area of specialAreas) {
+                    const distance = calculateDistance(lat, lng, area.lat, area.lng);
+                    if (distance < area.radius && distance < minDistance) {
                         minDistance = distance;
-                        nearestSite = {
-                            id: site.id,
-                            name: site.name,
+                        nearestArea = {
+                            id: area.id,
+                            name: area.name,
                             distance: `${Math.round(distance / 1000 * 10) / 10}km`
                         };
                     }
                 }
                 
-                return nearestSite;
+                return nearestArea;
             }
             
             // 距離計算（ハヴァーサイン公式）
@@ -1353,44 +1353,44 @@
                 return R * c;
             }
             
-            // 宇宙エネルギー計算
-            function calculateCosmicEnergy(lat, lng) {
-                // 緯度による基本エネルギー（赤道から離れるほど高い）
-                const latitudeEnergy = Math.abs(lat) * 2;
+            // 記録品質スコア計算
+            function calculateQualityScore(lat, lng) {
+                // 緯度による基本スコア（緯度が高いほど高品質な記録とする）
+                const latitudeScore = Math.abs(lat) * 2;
                 
-                // 経度による調整（日本周辺は高エネルギー）
-                const longitudeBonus = (lng > 120 && lng < 150) ? 20 : 0;
+                // 日本周辺での記録は高品質
+                const regionBonus = (lng > 120 && lng < 150) ? 20 : 0;
                 
-                // ランダム要素（宇宙的変動）
-                const cosmicVariation = Math.random() * 30;
+                // 環境による変動要素
+                const environmentFactor = Math.random() * 30;
                 
-                const totalEnergy = Math.min(100, latitudeEnergy + longitudeBonus + cosmicVariation);
+                const totalScore = Math.min(100, latitudeScore + regionBonus + environmentFactor);
                 
-                let level;
-                if (totalEnergy >= 80) level = `極高（${Math.round(totalEnergy)}/100）`;
-                else if (totalEnergy >= 60) level = `高（${Math.round(totalEnergy)}/100）`;
-                else if (totalEnergy >= 40) level = `中（${Math.round(totalEnergy)}/100）`;
-                else level = `低（${Math.round(totalEnergy)}/100）`;
+                let quality;
+                if (totalScore >= 80) quality = `最高品質（${Math.round(totalScore)}/100）`;
+                else if (totalScore >= 60) quality = `高品質（${Math.round(totalScore)}/100）`;
+                else if (totalScore >= 40) quality = `標準品質（${Math.round(totalScore)}/100）`;
+                else quality = `基本品質（${Math.round(totalScore)}/100）`;
                 
-                return { level, value: totalEnergy };
+                return { quality, value: totalScore };
             }
             
-            // 月相取得
+            // 月の状態取得
             function getMoonPhase() {
                 const phases = ['新月', '三日月', '上弦の月', '十三夜', '満月', '十六夜', '下弦の月', '晦日月'];
                 const phase = Math.floor(Math.random() * phases.length);
                 return phases[phase];
             }
             
-            // 季節エネルギー取得
-            function getSeasonalEnergy() {
+            // 季節情報取得
+            function getSeasonalInfo() {
                 const now = new Date();
                 const month = now.getMonth() + 1;
                 
-                if (month >= 3 && month <= 5) return '春のエネルギー集積期';
-                else if (month >= 6 && month <= 8) return '夏至エネルギー最高潮期';
-                else if (month >= 9 && month <= 11) return '秋分調和エネルギー期';
-                else return '冬至神秘エネルギー期';
+                if (month >= 3 && month <= 5) return '春の記録';
+                else if (month >= 6 && month <= 8) return '夏の記録';
+                else if (month >= 9 && month <= 11) return '秋の記録';
+                else return '冬の記録';
             }
             
             // 位置情報表示
@@ -1402,14 +1402,14 @@
                         <span class="location-label">📍 記録場所:</span> ${data.address}
                     </div>
                     <div class="location-item">
-                        <span class="location-label">🌟 聖地認定:</span> 
-                        <span class="sacred-site-badge">${data.sacred_site_name}</span>
+                        <span class="location-label">🗾 地域:</span> 
+                        <span class="sacred-site-badge">${data.area_name}</span>
                     </div>
                     <div class="location-item">
-                        <span class="location-label">📏 聖地距離:</span> ${data.distance_to_sacred}
+                        <span class="location-label">📏 距離:</span> ${data.distance_to_area}
                     </div>
                     <div class="location-item">
-                        <span class="location-label">⚡ 宇宙エネルギー:</span> ${data.cosmic_energy_level}
+                        <span class="location-label">⭐ 記録品質:</span> ${data.quality_score}
                     </div>
                     <div class="location-item">
                         <span class="location-label">🕒 記録時刻:</span> ${new Date().toLocaleString('ja-JP')}
@@ -1418,7 +1418,7 @@
                         <span class="location-label">🌙 月相:</span> ${data.moon_phase}
                     </div>
                     <div class="location-item">
-                        <span class="location-label">🌱 季節エネルギー:</span> ${data.seasonal_energy}
+                        <span class="location-label">🌸 季節:</span> ${data.seasonal_info}
                     </div>
                 `;
                 
