@@ -345,9 +345,9 @@ def create_standalone_qr(qr_img, metadata):
 @app.route('/reader')
 def pearl_memorial_reader():
     """
-    完全自立型Pearl Memorial Reader（QR画像・カメラ対応版）
+    完全自立型Pearl Memorial Reader（構文エラー修正版）
     """
-    return """
+    return '''
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -357,21 +357,6 @@ def pearl_memorial_reader():
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pearl Memorial">
     <title>Pearl Memorial Reader - QR画像・カメラ対応</title>
-    
-    <!-- PWA設定 -->
-    <link rel="manifest" href="data:application/json;charset=utf-8,{
-        &quot;name&quot;: &quot;Pearl Memorial Reader&quot;,
-        &quot;short_name&quot;: &quot;PearlReader&quot;,
-        &quot;start_url&quot;: &quot;./&quot;,
-        &quot;display&quot;: &quot;standalone&quot;,
-        &quot;background_color&quot;: &quot;#667eea&quot;,
-        &quot;theme_color&quot;: &quot;#667eea&quot;,
-        &quot;icons&quot;: [{
-            &quot;src&quot;: &quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23667eea'/%3E%3Ctext x='50' y='60' text-anchor='middle' fill='white' font-size='30'%3E🎵%3C/text%3E%3C/svg%3E&quot;,
-            &quot;sizes&quot;: &quot;192x192&quot;,
-            &quot;type&quot;: &quot;image/svg+xml&quot;
-        }]
-    }">
     
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -643,7 +628,6 @@ def pearl_memorial_reader():
                 this.currentImage = null;
             }
 
-            // カメラ機能
             async startCamera() {
                 const status = document.getElementById('status');
                 const startBtn = document.getElementById('startCameraBtn');
@@ -676,13 +660,10 @@ def pearl_memorial_reader():
                     
                 } catch (error) {
                     console.error('カメラエラー:', error);
-                    status.textContent = \`カメラエラー: \${error.name}\`;
+                    status.textContent = 'カメラエラー: ' + error.name;
                     
                     if (error.name === 'NotAllowedError') {
-                        status.innerHTML = \`
-                            カメラアクセスが拒否されました。<br>
-                            ブラウザ設定でカメラを許可するか、画像ファイルをご利用ください
-                        \`;
+                        status.innerHTML = 'カメラアクセスが拒否されました。<br>ブラウザ設定でカメラを許可するか、画像ファイルをご利用ください';
                     }
                 }
             }
@@ -700,7 +681,6 @@ def pearl_memorial_reader():
                     this.ctx.drawImage(this.video, 0, 0);
                     const imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
                     
-                    // QR検出試行
                     const qrData = this.detectQRFromImageData(imageData);
                     if (qrData) {
                         this.processQR(qrData);
@@ -710,7 +690,6 @@ def pearl_memorial_reader():
                 requestAnimationFrame(() => this.scan());
             }
 
-            // 画像ファイル処理
             handleImageFile(file) {
                 if (!file) return;
                 
@@ -734,7 +713,6 @@ def pearl_memorial_reader():
                     return;
                 }
                 
-                // キャンバスに画像を描画
                 const tempCanvas = document.createElement('canvas');
                 const tempCtx = tempCanvas.getContext('2d');
                 tempCanvas.width = this.currentImage.width;
@@ -743,7 +721,6 @@ def pearl_memorial_reader():
                 
                 const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
                 
-                // QR検出
                 const qrData = this.detectQRFromImageData(imageData);
                 if (qrData) {
                     this.processQR(qrData);
@@ -753,13 +730,11 @@ def pearl_memorial_reader():
             }
 
             detectQRFromImageData(imageData) {
-                // テスト用の検出ロジック（実際はより高度な画像解析が必要）
                 return this.mockQRDetection();
             }
 
             mockQRDetection() {
-                // 開発時のモック（実際は画像解析）
-                if (Math.random() < 0.3) { // 30%の確率でQR検出をシミュレート
+                if (Math.random() < 0.3) {
                     return JSON.stringify({
                         "pearl_memorial": "v1.0",
                         "type": "standalone_audio",
@@ -779,7 +754,6 @@ def pearl_memorial_reader():
             }
 
             processQR(qrContent) {
-                // 重複処理防止
                 if (qrContent === this.lastProcessedQR) return;
                 this.lastProcessedQR = qrContent;
                 
@@ -793,7 +767,6 @@ def pearl_memorial_reader():
                         document.getElementById('status').textContent = '❌ Pearl Memorial QRではありません';
                     }
                 } catch (e) {
-                    // データURI直接形式の場合
                     if (qrContent.startsWith('data:audio/')) {
                         this.playAudio(qrContent, 'Direct Audio QR');
                     } else {
@@ -807,13 +780,8 @@ def pearl_memorial_reader():
                 const metadata = memorialData.metadata;
                 const memorialId = metadata.id;
                 
-                // メモリアル保存
                 this.memorials[memorialId] = memorialData;
-                
-                // 音声再生
                 this.playAudio(memorialData.audio_data, metadata.title);
-                
-                // リスト更新
                 this.updateMemorialList();
             }
 
@@ -822,7 +790,7 @@ def pearl_memorial_reader():
                     const audio = new Audio(dataURI);
                     
                     audio.play().then(() => {
-                        document.getElementById('status').textContent = \`🎵 再生中: \${title}\`;
+                        document.getElementById('status').textContent = '🎵 再生中: ' + title;
                     }).catch(e => {
                         document.getElementById('status').textContent = '🔇 音声再生にはユーザー操作が必要です（タップして再生）';
                         console.error('音声再生エラー:', e);
@@ -858,18 +826,15 @@ def pearl_memorial_reader():
                     item.className = 'memorial-item';
                     item.onclick = () => this.playAudio(memorial.audio_data, metadata.title);
                     
-                    item.innerHTML = \`
-                        <h3>🎵 \${metadata.title}</h3>
-                        <p>📅 \${new Date(metadata.created).toLocaleString()}</p>
-                        <p>📁 \${metadata.filename}</p>
-                        <p>🆔 \${metadata.id}</p>
-                    \`;
+                    item.innerHTML = '<h3>🎵 ' + metadata.title + '</h3>' +
+                        '<p>📅 ' + new Date(metadata.created).toLocaleString() + '</p>' +
+                        '<p>📁 ' + metadata.filename + '</p>' +
+                        '<p>🆔 ' + metadata.id + '</p>';
                     
                     itemsContainer.appendChild(item);
                 });
             }
 
-            // テスト機能
             testQR() {
                 const testMemorial = {
                     "pearl_memorial": "v1.0",
@@ -890,17 +855,13 @@ def pearl_memorial_reader():
             }
         }
 
-        // タブ切り替え機能
         function switchMethod(method) {
-            // タブの見た目更新
             document.querySelectorAll('.method-tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelector(\`[onclick="switchMethod('\${method}')"]\`).classList.add('active');
+            document.querySelector("[onclick=\\"switchMethod('" + method + "')\\"']").classList.add('active');
             
-            // コンテンツの表示切り替え
             document.querySelectorAll('.method-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(\`\${method}-method\`).classList.add('active');
+            document.getElementById(method + '-method').classList.add('active');
             
-            // ステータス更新
             if (method === 'camera') {
                 document.getElementById('status').textContent = 'カメラを開始ボタンを押してください';
             } else {
@@ -908,7 +869,6 @@ def pearl_memorial_reader():
             }
         }
 
-        // ドラッグ&ドロップ機能
         const fileUploadArea = document.getElementById('fileUploadArea');
         
         fileUploadArea.addEventListener('dragover', (e) => {
@@ -929,7 +889,6 @@ def pearl_memorial_reader():
             }
         });
 
-        // 初期化
         const reader = new PearlMemorialReader();
         
         async function startCamera() {
@@ -948,18 +907,17 @@ def pearl_memorial_reader():
             reader.testQR();
         }
         
-        // PWA検出
         if (window.navigator.standalone) {
             document.querySelector('.offline-indicator').textContent = '📱 PWAモード';
         }
         
-        // ページ読み込み完了
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('status').textContent = '🚀 Pearl Memorial Reader 準備完了';
         });
     </script>
 </body>
-</html>Items"></div>
+</html>
+    '''Items"></div>
         </div>
         
         <div class="tech-info">
