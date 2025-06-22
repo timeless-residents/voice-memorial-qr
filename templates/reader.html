@@ -93,7 +93,22 @@
     <script>
       window.addEventListener('online', function() {
         if (document.getElementById('offlineNotice')) {
-          document.getElementById('offlineNotice').style.display = 'none';
+          // オンライン通知に変更
+          const notice = document.getElementById('offlineNotice');
+          notice.style.backgroundColor = 'rgba(39, 174, 96, 0.9)';
+          notice.innerHTML = '🌐 オンライン接続を検出しました';
+
+          // 3秒後に非表示
+          setTimeout(() => {
+            notice.style.display = 'none';
+          }, 3000);
+
+          // ステータスを更新
+          const statusEl = document.querySelector('.status');
+          if (statusEl) {
+            statusEl.textContent = 'QRコードデータを貼り付けて検証・再生してください';
+            statusEl.className = 'status';
+          }
         }
       });
 
@@ -111,10 +126,60 @@
           notice.style.textAlign = 'center';
           notice.style.zIndex = '9999';
           notice.style.fontWeight = 'bold';
-          notice.innerHTML = '📵 オフラインモード - 機能が制限されています';
+          notice.innerHTML = '📵 オフラインモード - 保存済みQRコードの読み取りは可能です';
           document.body.appendChild(notice);
+
+          // ステータスを更新
+          const statusEl = document.querySelector('.status');
+          if (statusEl) {
+            statusEl.textContent = 'オフラインモード - 保存済みQRコードの読み取り・再生が可能です';
+            statusEl.className = 'status processing';
+          }
         } else {
           document.getElementById('offlineNotice').style.display = 'block';
+        }
+      });
+
+      // オフライン対応強化
+      document.addEventListener('DOMContentLoaded', function() {
+        // 初期状態の確認
+        if (!navigator.onLine) {
+          console.log('📵 Initial state: Offline');
+
+          // ステータスを更新
+          const statusEl = document.querySelector('.status');
+          if (statusEl) {
+            statusEl.textContent = 'オフラインモード - 保存済みQRコードの読み取り・再生が可能です';
+            statusEl.className = 'status processing';
+          }
+
+          // QRデータの自動読み込み試行
+          try {
+            // ローカルストレージなどからキャッシュされたQRデータを復元
+            const cachedQRData = localStorage.getItem('lastValidQRData');
+            if (cachedQRData) {
+              console.log('🔍 Found cached QR data in localStorage');
+
+              // キャッシュされたデータをテキストエリアに入力
+              const qrInputEl = document.getElementById('qrInput');
+              if (qrInputEl) {
+                qrInputEl.value = cachedQRData;
+
+                // 検証ボタンをクリックできるようにする
+                const validateBtnEl = document.getElementById('validateBtn');
+                if (validateBtnEl) {
+                  // キャッシュされたデータがあることを通知
+                  const statusEl = document.querySelector('.status');
+                  if (statusEl) {
+                    statusEl.textContent = '前回読み取ったQRコードデータを自動復元しました。「データ検証」ボタンをクリックしてください。';
+                    statusEl.className = 'status success';
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            console.log('❌ Error restoring cached QR data', e);
+          }
         }
       });
     </script>
@@ -593,7 +658,7 @@
         // データ検証関数
         function validateData() {
             const qrData = qrInputEl.value.trim();
-            
+
             if (!qrData) {
                 updateStatus('❌ 検証するデータを入力してください', 'error');
                 hideFormatInfo();
@@ -601,23 +666,23 @@
                 redirectBtnEl.style.display = 'none';
                 return;
             }
-            
+
             try {
                 updateStatus('🔍 データ形式を検証中...', 'processing');
-                
+
                 // 🧠 データ形式判定
                 const format = detectQRFormat(qrData);
-                
+
                 let result = `<strong>🔍 検証結果:</strong><br>`;
                 result += `形式: ${format.description}<br>`;
                 result += `モード: ${format.mode}<br><br>`;
-                
+
                 if (format.type === 'url') {
                     // URL形式の詳細検証
                     result += `<strong>📱 URL形式詳細:</strong><br>`;
                     result += `✅ ベースURL確認済み<br>`;
                     result += `✅ audioパラメータ存在<br>`;
-                    
+
                     try {
                         const audioData = decodeURIComponent(format.audioParam);
                         if (audioData.startsWith('data:audio/')) {
@@ -629,21 +694,21 @@
                     } catch (error) {
                         result += `❌ URLデコードエラー: ${error.message}<br>`;
                     }
-                    
+
                 } else if (format.type === 'json') {
                     // JSON形式の詳細検証
                     const pearlData = format.data;
                     result += `<strong>🔧 JSON形式詳細:</strong><br>`;
                     result += `✅ Pearl Memorial v1.0 形式<br>`;
                     result += `✅ standalone_audio タイプ<br>`;
-                    
+
                     if (pearlData.audio_data && pearlData.audio_data.startsWith('data:audio/')) {
                         result += `✅ 音声データURI正常<br>`;
                         result += `📏 音声データ長: ${pearlData.audio_data.length} 文字<br>`;
                     } else {
                         result += `❌ 音声データURIが無効<br>`;
                     }
-                    
+
                     if (pearlData.metadata) {
                         result += `✅ メタデータ存在<br>`;
                         result += `📝 タイトル: ${pearlData.metadata.title || 'なし'}<br>`;
@@ -651,48 +716,67 @@
                     } else {
                         result += `❌ メタデータが見つかりません<br>`;
                     }
-                    
+
                 } else {
                     result += `❌ 認識できないデータ形式<br>`;
                     result += `💡 対応形式: iPhone Camera URL または Pearl Memorial JSON<br>`;
                 }
-                
+
                 result += `<br>📊 総データ長: ${qrData.length} 文字`;
-                
+
                 showDebug(result);
-                
+
                 if (format.redirectUrl) {
                     // 検証成功 - リダイレクト可能
                     validatedData = format;
                     updateStatus('✅ 検証完了 - 再生ページに移動できます', 'success');
                     redirectBtnEl.style.display = 'block';
-                    
+
+                    // ✅ 検証成功したQRデータをローカルストレージに保存（オフライン対応）
+                    try {
+                        localStorage.setItem('lastValidQRData', qrData);
+                        console.log('✅ QR data saved to localStorage for offline use');
+
+                        // メタデータ情報も保存（可能であれば）
+                        if (format.type === 'json' && format.data && format.data.metadata) {
+                            const metaInfo = {
+                                title: format.data.metadata.title || 'Pearl Memorial Audio',
+                                id: format.data.metadata.id || '',
+                                timestamp: new Date().toISOString()
+                            };
+                            localStorage.setItem('lastQRMetadata', JSON.stringify(metaInfo));
+                        }
+                    } catch (e) {
+                        console.log('⚠️ Failed to save QR data to localStorage', e);
+                    }
+
                     showFormatInfo(`
                         <h4>✅ 検証完了</h4>
                         <strong>形式:</strong> ${format.description}<br>
                         <strong>モード:</strong> ${format.mode}<br>
                         <strong>転送先:</strong> play.html<br>
                         <strong>推奨アクション:</strong> 「▶️ 再生ページへ移動」ボタンをタップ
+                        <br><small>✅ データはオフライン再生用に保存されました</small>
                     `);
                 } else {
                     // 検証失敗
                     validatedData = null;
                     updateStatus('❌ 検証失敗 - 無効なデータ形式', 'error');
                     redirectBtnEl.style.display = 'none';
-                    
+
                     showFormatInfo(`
                         <h4>❌ 検証失敗</h4>
                         <strong>問題:</strong> ${format.description}<br>
                         <strong>対応:</strong> 正しいPearl Memorial QRコードを使用してください
                     `);
                 }
-                
+
             } catch (error) {
                 log('Validation error: ' + error.message);
                 updateStatus('❌ 検証エラー: ' + error.message, 'error');
                 validatedData = null;
                 redirectBtnEl.style.display = 'none';
-                
+
                 showDebug(`
                     ❌ 検証エラー<br>
                     エラー: ${error.message}<br>

@@ -7,11 +7,20 @@ const ESSENTIAL_FILES = [
   "/play",
   "/reader",
   "/static/icon-192.png",
-  "/static/icon-512.png", 
+  "/static/icon-512.png",
   "/static/maskable-icon-512.png",
   "/static/manifest.json",
   "/static/offline.html",
   OFFLINE_URL
+];
+
+// 事前にキャッシュすると良いがなくても動作するファイル
+const OPTIONAL_FILES = [
+  // スタイルシート、スクリプト、その他のリソース
+  "/static/app.js",
+  "/static/styles.css",
+  // 再生機能に必要なリソース
+  "/static/audio-player.js"
 ];
 
 // 🚀 インストール：必須ファイルの確実キャッシュ
@@ -23,12 +32,42 @@ self.addEventListener("install", event => {
 
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
+      .then(async cache => {
         console.log("[SW] Caching essential files...");
-        return cache.addAll(ESSENTIAL_FILES);
-      })
-      .then(() => {
+
+        // 必須ファイルを確実にキャッシュ（失敗した場合は例外）
+        await cache.addAll(ESSENTIAL_FILES);
         console.log("[SW] ✅ All essential files cached successfully");
+
+        // オプションファイルは個別にキャッシュ試行（失敗しても続行）
+        if (OPTIONAL_FILES.length > 0) {
+          console.log("[SW] Attempting to cache optional files...");
+
+          const optionalCachePromises = OPTIONAL_FILES.map(url =>
+            fetch(url)
+              .then(response => {
+                if (response.ok) {
+                  cache.put(url, response);
+                  console.log(`[SW] ✓ Optional file cached: ${url}`);
+                } else {
+                  console.log(`[SW] ⚠ Failed to fetch optional file: ${url}`);
+                }
+              })
+              .catch(err => console.log(`[SW] ⚠ Error caching optional file: ${url}`, err))
+          );
+
+          // オプションファイルのキャッシュを試みるが、失敗してもインストールは続行
+          try {
+            await Promise.allSettled(optionalCachePromises);
+            console.log("[SW] Optional files caching completed");
+          } catch (error) {
+            console.log("[SW] Some optional files could not be cached", error);
+          }
+        }
+
+        // キャッシュされたエントリを確認
+        const keys = await cache.keys();
+        console.log(`[SW] 📊 Total cached entries: ${keys.length}`);
       })
       .catch(error => {
         console.error("[SW] ❌ Failed to cache essential files:", error);
@@ -79,7 +118,29 @@ self.addEventListener("fetch", event => {
 // 🛠️ リクエスト処理の中核ロジック
 async function handleRequest(request) {
   const url = new URL(request.url);
-  
+
+  // QR生成エンドポイントは常にオンライン接続が必要
+  if (url.pathname === '/generate') {
+    try {
+      console.log(`[SW] 🔒 QR generation requires online connection: ${url.pathname}`);
+      return await fetch(request);
+    } catch (error) {
+      console.log(`[SW] ❌ QR generation failed (offline): ${url.pathname}`);
+      // QR生成失敗時は専用メッセージを返す
+      if (request.headers.get('Accept')?.includes('text/html')) {
+        return createQRGenerationOfflineResponse();
+      } else {
+        return new Response(JSON.stringify({
+          error: 'QR生成にはオンライン接続が必要です',
+          offline: true
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+  }
+
   try {
     // 1️⃣ キャッシュ優先チェック
     const cachedResponse = await caches.match(request);
@@ -92,29 +153,95 @@ async function handleRequest(request) {
     try {
       console.log(`[SW] 🌐 Network request: ${url.pathname}`);
       const networkResponse = await fetch(request);
-      
+
       // 成功したレスポンスをキャッシュに追加
       if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
         const responseToCache = networkResponse.clone();
-        
+
+        // 動的コンテンツを積極的にキャッシュ
         caches.open(CACHE_NAME)
-          .then(cache => cache.put(request, responseToCache))
+          .then(cache => {
+            // URLパラメータを含むリクエストも完全にキャッシュ（音声データを含む）
+            cache.put(request, responseToCache);
+            console.log(`[SW] 💾 Cached dynamic content: ${url.pathname}`);
+          })
           .catch(error => console.log("[SW] Cache update failed:", error));
       }
-      
+
       return networkResponse;
-      
+
     } catch (networkError) {
       console.log(`[SW] ❌ Network failed for ${url.pathname}:`, networkError.message);
-      
+
       // 3️⃣ オフライン フォールバック戦略
       return handleOfflineFallback(request, url);
     }
-    
+
   } catch (error) {
     console.error(`[SW] ❌ Request handling failed for ${url.pathname}:`, error);
     return handleOfflineFallback(request, url);
   }
+}
+
+// QR生成が失敗した場合の専用レスポンス
+function createQRGenerationOfflineResponse() {
+  const offlineHtml = `<!DOCTYPE html>
+  <html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR生成 - オフライン</title>
+    <style>
+      body {
+        font-family: -apple-system, sans-serif;
+        text-align: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        height: 100vh;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .container {
+        background: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        max-width: 500px;
+        width: 90%;
+      }
+      h1 { color: #e74c3c; }
+      p { margin: 20px 0; line-height: 1.5; }
+      .button {
+        background: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 30px;
+        text-decoration: none;
+        display: inline-block;
+        margin-top: 20px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📵 オフラインモード</h1>
+      <p>QRコードの生成にはオンライン接続が必要です。Wi-FiまたはモバイルデータをONにしてから再試行してください。</p>
+      <p>既存のQRコードの閲覧・再生は可能です。</p>
+      <a href="/" class="button">ホームに戻る</a>
+    </div>
+    <script>
+      window.addEventListener('online', () => {
+        window.location.reload();
+      });
+    </script>
+  </body>
+  </html>`;
+
+  return new Response(offlineHtml, {
+    headers: { 'Content-Type': 'text/html' }
+  });
 }
 
 // 🚨 オフライン時のフォールバック処理
@@ -137,13 +264,47 @@ async function handleOfflineFallback(request, url) {
 
 // 📄 HTML フォールバック
 async function handleHTMLFallback(url) {
+  console.log(`[SW] 🔍 Handling HTML fallback for: ${url.pathname}`);
+
+  // play.htmlのURLパラメータ付きリクエスト（audio, data）を処理
+  if (url.pathname.includes('/play') && url.search) {
+    console.log(`[SW] 🎵 Audio playback URL detected with params: ${url.search}`);
+
+    // キャッシュ内の同じURLのエントリを検索
+    const cache = await caches.open(CACHE_NAME);
+    const cachedKeys = await cache.keys();
+
+    // URLのパス部分が一致するキャッシュエントリを探す
+    for (const key of cachedKeys) {
+      const keyURL = new URL(key.url);
+
+      // 同じパスでクエリパラメータも部分的に一致するものを探す
+      if (keyURL.pathname === url.pathname && keyURL.search && keyURL.search.includes(url.search.substring(0, 20))) {
+        console.log(`[SW] ✅ Found matching cached audio URL: ${keyURL.pathname}${keyURL.search.substring(0, 20)}...`);
+        const cachedResponse = await cache.match(key);
+        if (cachedResponse) return cachedResponse;
+      }
+    }
+
+    // 特定のパラメータを含む場合は音声データURLとして処理
+    if (url.searchParams.has('audio') || url.searchParams.has('data')) {
+      console.log(`[SW] 📻 Attempting to serve basic player for audio`);
+      // 基本的な再生ページを提供
+      const playResponse = await caches.match('/play');
+      if (playResponse) {
+        console.log(`[SW] ✅ Serving basic player page`);
+        return playResponse;
+      }
+    }
+  }
+
   // 特定ページの代替キャッシュを試行
   const alternativePages = [
     { pattern: '/play', fallback: '/play' },
     { pattern: '/reader', fallback: '/reader' },
     { pattern: '/', fallback: '/' }
   ];
-  
+
   for (const alt of alternativePages) {
     if (url.pathname.includes(alt.pattern)) {
       const altResponse = await caches.match(alt.fallback);
@@ -153,14 +314,14 @@ async function handleHTMLFallback(url) {
       }
     }
   }
-  
+
   // 専用オフラインページ
   const offlineResponse = await caches.match(OFFLINE_URL);
   if (offlineResponse) {
     console.log("[SW] ✅ Offline page served");
     return offlineResponse;
   }
-  
+
   // 最終フォールバック：シンプルなオフラインHTML
   return createFallbackHTML();
 }

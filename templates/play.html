@@ -93,7 +93,15 @@
     <script>
       window.addEventListener('online', function() {
         if (document.getElementById('offlineNotice')) {
-          document.getElementById('offlineNotice').style.display = 'none';
+          // オンライン通知に変更
+          const notice = document.getElementById('offlineNotice');
+          notice.style.backgroundColor = 'rgba(39, 174, 96, 0.9)';
+          notice.innerHTML = '🌐 オンライン接続を検出しました';
+
+          // 3秒後に非表示
+          setTimeout(() => {
+            notice.style.display = 'none';
+          }, 3000);
         }
       });
 
@@ -111,10 +119,39 @@
           notice.style.textAlign = 'center';
           notice.style.zIndex = '9999';
           notice.style.fontWeight = 'bold';
-          notice.innerHTML = '📵 オフラインモード - 機能が制限されています';
+          notice.innerHTML = '📵 オフラインモード - 音声再生は引き続き可能です';
           document.body.appendChild(notice);
+
+          // オフラインモードでの再生ステータス表示
+          const statusEl = document.getElementById('status');
+          if (statusEl) {
+            statusEl.innerHTML += '<br><small>✈️ オフラインモードでも再生可能です</small>';
+          }
         } else {
           document.getElementById('offlineNotice').style.display = 'block';
+        }
+      });
+
+      // オフライン対応強化 - URL内のデータ直接解析
+      document.addEventListener('DOMContentLoaded', function() {
+        // 初期状態の確認
+        if (!navigator.onLine) {
+          console.log('📵 Initial state: Offline');
+          const statusEl = document.getElementById('status');
+          if (statusEl) {
+            statusEl.innerHTML += '<br><small>✈️ オフラインモードでも再生可能です</small>';
+          }
+
+          // URLからの音声データ抽出試行
+          try {
+            const url = new URL(window.location.href);
+            if (url.searchParams.has('audio')) {
+              console.log('🔍 Direct extraction of audio data from URL');
+              // ここでURLからのデータ抽出処理
+            }
+          } catch (e) {
+            console.log('❌ Error extracting audio data from URL', e);
+          }
         }
       });
     </script>

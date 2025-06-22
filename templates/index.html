@@ -91,13 +91,46 @@
 
     <!-- オフライン通知機能 -->
     <script>
+      // グローバル変数
+      let offlineCheckInterval = null;
+
       window.addEventListener('online', function() {
         if (document.getElementById('offlineNotice')) {
-          document.getElementById('offlineNotice').style.display = 'none';
+          // オンライン通知に変更
+          const notice = document.getElementById('offlineNotice');
+          notice.style.backgroundColor = 'rgba(39, 174, 96, 0.9)';
+          notice.innerHTML = '🌐 オンライン接続を検出しました';
+
+          // 3秒後に非表示
+          setTimeout(() => {
+            notice.style.display = 'none';
+          }, 3000);
         }
+
+        // 定期チェックを停止
+        if (offlineCheckInterval) {
+          clearInterval(offlineCheckInterval);
+          offlineCheckInterval = null;
+        }
+
+        // 生成ボタンの有効化
+        enableGenerateButton();
       });
 
       window.addEventListener('offline', function() {
+        showOfflineNotice();
+
+        // QR生成ボタンの無効化
+        disableGenerateButton();
+
+        // 5秒ごとに接続状態を確認
+        if (!offlineCheckInterval) {
+          offlineCheckInterval = setInterval(checkConnectivity, 5000);
+        }
+      });
+
+      // オフライン通知を表示
+      function showOfflineNotice() {
         if (!document.getElementById('offlineNotice')) {
           const notice = document.createElement('div');
           notice.id = 'offlineNotice';
@@ -111,11 +144,94 @@
           notice.style.textAlign = 'center';
           notice.style.zIndex = '9999';
           notice.style.fontWeight = 'bold';
-          notice.innerHTML = '📵 オフラインモード - 機能が制限されています';
+          notice.innerHTML = '📵 オフラインモード - QR生成を除く機能は使用可能です';
           document.body.appendChild(notice);
         } else {
           document.getElementById('offlineNotice').style.display = 'block';
         }
+      }
+
+      // QR生成ボタンの無効化
+      function disableGenerateButton() {
+        // QR生成ボタンの無効化
+        const generateButton = document.getElementById('generateButton');
+        if (generateButton) {
+          generateButton.disabled = true;
+          generateButton.title = "オフラインモードではQR生成できません";
+          generateButton.innerHTML = "📵 オフライン中はQR生成できません";
+
+          // 説明テキストの追加
+          if (!document.getElementById('offlineGenerateInfo')) {
+            const infoText = document.createElement('div');
+            infoText.id = 'offlineGenerateInfo';
+            infoText.style.color = '#e74c3c';
+            infoText.style.textAlign = 'center';
+            infoText.style.padding = '10px';
+            infoText.style.marginTop = '10px';
+            infoText.style.fontSize = '0.9em';
+            infoText.innerHTML = 'オンライン接続が必要です。保存済みQRコードは閲覧・再生できます。';
+
+            // ボタンの後に挿入
+            generateButton.parentNode.insertBefore(infoText, generateButton.nextSibling);
+          } else {
+            document.getElementById('offlineGenerateInfo').style.display = 'block';
+          }
+        }
+      }
+
+      // QR生成ボタンの有効化
+      function enableGenerateButton() {
+        const generateButton = document.getElementById('generateButton');
+        if (generateButton) {
+          // 元のスタイルに戻す
+          generateButton.disabled = false;
+          generateButton.title = "";
+          generateButton.innerHTML = "🚀 ハイブリッドQRコードを生成";
+
+          // 説明テキストを非表示
+          if (document.getElementById('offlineGenerateInfo')) {
+            document.getElementById('offlineGenerateInfo').style.display = 'none';
+          }
+        }
+      }
+
+      // 接続状態の確認
+      function checkConnectivity() {
+        // navigator.onLineは必ずしも正確ではないため、実際にリクエストを送信
+        fetch('/static/manifest.json', {
+          method: 'HEAD',
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        .then(() => {
+          console.log('🌐 Connectivity test passed');
+          // オンラインと判断
+          if (!navigator.onLine) {
+            // navigator.onLineの状態を更新するためにイベントを発火
+            window.dispatchEvent(new Event('online'));
+          }
+        })
+        .catch(() => {
+          console.log('📵 Connectivity test failed');
+          // オフラインと判断
+          if (navigator.onLine) {
+            // navigator.onLineの状態を更新するためにイベントを発火
+            window.dispatchEvent(new Event('offline'));
+          }
+        });
+      }
+
+      // 初期化時に接続状態を確認
+      document.addEventListener('DOMContentLoaded', function() {
+        console.log('📡 Initial connectivity check');
+        // 初期状態のチェック
+        if (!navigator.onLine) {
+          showOfflineNotice();
+          disableGenerateButton();
+        }
+
+        // 念のため実際の接続状態を確認
+        checkConnectivity();
       });
     </script>
 
