@@ -590,12 +590,18 @@
                 this.elements.playButton.style.display = 'block';
                 this.elements.playButton.disabled = true; // 準備完了まで無効
                 
+                this.log('🔧 Starting audio preparation in 100ms...');
+                
                 // 音声準備を開始（非同期）
                 setTimeout(() => {
+                    this.log('⏰ Timeout reached, calling prepareAudio...');
                     this.prepareAudio().catch(error => {
                         this.log(`❌ Prepare audio failed in showDirectMode: ${error.message}`);
+                        this.log(`❌ Error stack: ${error.stack}`);
                     });
                 }, 100);
+                
+                this.log('✅ showDirectMode completed');
             }
             
             // メタデータモード解析
@@ -724,46 +730,69 @@
             
             // AudioContext初期化
             async initAudioContext() {
+                this.log('🔧 initAudioContext() called');
+                
                 try {
                     this.log('🔧 Initializing AudioContext...');
                     
                     if (!this.audioContext) {
                         try {
-                            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                            this.log(`AudioContext created: ${this.audioContext.state}`);
+                            this.log('🔄 Creating new AudioContext...');
+                            
+                            // Safari/WebKit対応
+                            const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+                            if (!AudioContextConstructor) {
+                                throw new Error('AudioContext not supported in this browser');
+                            }
+                            
+                            this.audioContext = new AudioContextConstructor();
+                            this.log(`✅ AudioContext created: ${this.audioContext.state}`);
                         } catch (error) {
                             this.log(`❌ AudioContext creation failed: ${error.message}`);
                             throw new Error('AudioContext作成に失敗しました: ' + error.message);
                         }
                     }
                     
+                    this.log(`Current AudioContext state: ${this.audioContext.state}`);
+                    
                     if (this.audioContext.state === 'suspended') {
-                        this.log('AudioContext is suspended, attempting to resume...');
+                        this.log('⚠️ AudioContext is suspended, attempting to resume...');
                         try {
                             await this.audioContext.resume();
-                            this.log(`AudioContext resumed: ${this.audioContext.state}`);
+                            this.log(`✅ AudioContext resumed: ${this.audioContext.state}`);
                         } catch (error) {
                             this.log(`❌ AudioContext resume failed: ${error.message}`);
                             throw new Error('AudioContext再開に失敗しました: ' + error.message);
                         }
                     }
                     
-                    this.log(`✅ AudioContext ready, state: ${this.audioContext.state}`);
+                    // 最終状態確認
+                    this.log(`✅ AudioContext ready, final state: ${this.audioContext.state}`);
+                    
+                    // Safari特有の問題対応
+                    if (this.audioContext.state !== 'running') {
+                        this.log(`⚠️ AudioContext state is not 'running': ${this.audioContext.state}`);
+                        // それでも継続してみる
+                    }
                     
                 } catch (error) {
                     this.log(`❌ AudioContext initialization failed: ${error.message}`);
+                    this.log(`❌ Error stack: ${error.stack}`);
                     throw error;
                 }
             }
             
             // 音声データ準備
             async prepareAudio() {
+                this.log('🔥 prepareAudio() called');
+                
                 try {
                     this.updateStatus('🔄 音声データを準備中...');
                     this.log(`🔄 Preparing audio, mode: ${this.mode}`);
                     this.log(`Audio data length: ${this.audioData?.length}`);
                     
                     if (!this.audioData) {
+                        this.log('❌ No audio data available');
                         throw new Error('音声データがありません');
                     }
                     
@@ -773,31 +802,46 @@
                     }
                     
                     this.log('✅ Audio data is valid, initializing AudioContext...');
-                    await this.initAudioContext();
+                    
+                    // AudioContext初期化をより詳細にログ
+                    try {
+                        await this.initAudioContext();
+                        this.log('✅ AudioContext initialization completed');
+                    } catch (audioContextError) {
+                        this.log(`❌ AudioContext init failed: ${audioContextError.message}`);
+                        throw audioContextError;
+                    }
                     
                     this.updateStatus('🔊 音声をデコード中...');
-                    this.log('🔊 Decoding audio data...');
+                    this.log('🔊 Starting audio decoding...');
                     
                     // Base64デコード
                     const commaIndex = this.audioData.indexOf(',');
                     if (commaIndex === -1) {
+                        this.log('❌ No comma found in audio data');
                         throw new Error('音声データにカンマが見つかりません');
                     }
                     
                     const base64Data = this.audioData.substring(commaIndex + 1);
                     if (!base64Data) {
+                        this.log('❌ Empty base64 data');
                         throw new Error('Base64データが空です');
                     }
                     
                     this.log(`Base64 data length: ${base64Data.length}`);
+                    this.log(`Base64 data preview: ${base64Data.substring(0, 50)}...`);
                     
                     let binaryString;
                     try {
+                        this.log('🔄 Converting base64 to binary...');
                         binaryString = atob(base64Data);
-                    } catch (error) {
-                        throw new Error('Base64デコードに失敗しました: ' + error.message);
+                        this.log(`✅ Base64 conversion successful, binary length: ${binaryString.length}`);
+                    } catch (base64Error) {
+                        this.log(`❌ Base64 conversion failed: ${base64Error.message}`);
+                        throw new Error('Base64デコードに失敗しました: ' + base64Error.message);
                     }
                     
+                    this.log('🔄 Creating ArrayBuffer...');
                     const arrayBuffer = new ArrayBuffer(binaryString.length);
                     const uint8Array = new Uint8Array(arrayBuffer);
                     
@@ -805,15 +849,17 @@
                         uint8Array[i] = binaryString.charCodeAt(i);
                     }
                     
-                    this.log(`Binary conversion complete, buffer size: ${arrayBuffer.byteLength}`);
+                    this.log(`✅ Binary conversion complete, buffer size: ${arrayBuffer.byteLength}`);
                     
                     // 音声バッファ作成
                     try {
+                        this.log('🔄 Decoding audio data with AudioContext...');
                         this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
                         this.log(`✅ Audio decoded successfully: ${this.audioBuffer.duration}s`);
-                    } catch (error) {
-                        this.log(`❌ Audio decoding failed: ${error.message}`);
-                        throw new Error('音声デコードに失敗しました: ' + error.message);
+                    } catch (decodeError) {
+                        this.log(`❌ Audio decoding failed: ${decodeError.message}`);
+                        this.log(`❌ AudioContext state: ${this.audioContext.state}`);
+                        throw new Error('音声デコードに失敗しました: ' + decodeError.message);
                     }
                     
                     // 音声情報表示
@@ -825,6 +871,7 @@
                     
                 } catch (error) {
                     this.log(`❌ Audio preparation failed: ${error.message}`);
+                    this.log(`❌ Error stack: ${error.stack}`);
                     this.updateStatus('❌ エラー: ' + error.message, 'error');
                     this.elements.playButton.textContent = '❌ 再生できません';
                     this.elements.playButton.disabled = true;
