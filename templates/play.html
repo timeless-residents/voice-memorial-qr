@@ -446,6 +446,7 @@
             constructor() {
                 this.audioContext = null;
                 this.currentSource = null;
+                this.rawAudioBuffer = null; // 生音声データ（AudioContextデコード前）
                 this.audioBuffer = null;
                 this.isPlaying = false;
                 this.startTime = 0;
@@ -782,7 +783,7 @@
                 }
             }
             
-            // 音声データ準備
+            // 音声データ準備（AudioContext初期化は除く）
             async prepareAudio() {
                 this.log('🔥 prepareAudio() called');
                 
@@ -801,16 +802,7 @@
                         throw new Error('無効な音声データ形式です');
                     }
                     
-                    this.log('✅ Audio data is valid, initializing AudioContext...');
-                    
-                    // AudioContext初期化をより詳細にログ
-                    try {
-                        await this.initAudioContext();
-                        this.log('✅ AudioContext initialization completed');
-                    } catch (audioContextError) {
-                        this.log(`❌ AudioContext init failed: ${audioContextError.message}`);
-                        throw audioContextError;
-                    }
+                    this.log('✅ Audio data is valid, skipping AudioContext init (will init on play)');
                     
                     this.updateStatus('🔊 音声をデコード中...');
                     this.log('🔊 Starting audio decoding...');
@@ -842,32 +834,22 @@
                     }
                     
                     this.log('🔄 Creating ArrayBuffer...');
-                    const arrayBuffer = new ArrayBuffer(binaryString.length);
-                    const uint8Array = new Uint8Array(arrayBuffer);
+                    this.rawAudioBuffer = new ArrayBuffer(binaryString.length);
+                    const uint8Array = new Uint8Array(this.rawAudioBuffer);
                     
                     for (let i = 0; i < binaryString.length; i++) {
                         uint8Array[i] = binaryString.charCodeAt(i);
                     }
                     
-                    this.log(`✅ Binary conversion complete, buffer size: ${arrayBuffer.byteLength}`);
+                    this.log(`✅ Binary conversion complete, buffer size: ${this.rawAudioBuffer.byteLength}`);
                     
-                    // 音声バッファ作成
-                    try {
-                        this.log('🔄 Decoding audio data with AudioContext...');
-                        this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                        this.log(`✅ Audio decoded successfully: ${this.audioBuffer.duration}s`);
-                    } catch (decodeError) {
-                        this.log(`❌ Audio decoding failed: ${decodeError.message}`);
-                        this.log(`❌ AudioContext state: ${this.audioContext.state}`);
-                        throw new Error('音声デコードに失敗しました: ' + decodeError.message);
-                    }
+                    // AudioContextでのデコードは再生時に実行
+                    this.log('💡 Audio data prepared, AudioContext decoding will happen on play button tap');
                     
-                    // 音声情報表示
-                    this.showAudioInfo();
-                    
-                    this.updateStatus('✅ 再生準備完了', 'success');
+                    this.updateStatus('✅ タップして再生', 'success');
                     this.elements.playButton.disabled = false;
-                    this.log('🎉 Audio preparation completed successfully');
+                    this.elements.playButton.textContent = '▶️ 音声を再生（タップが必要）';
+                    this.log('🎉 Audio preparation completed successfully (ready for user interaction)');
                     
                 } catch (error) {
                     this.log(`❌ Audio preparation failed: ${error.message}`);
@@ -908,11 +890,46 @@
                 }
             }
             
-            // 音声再生
+            // 音声再生（ユーザーインタラクション時にAudioContext初期化）
             async playAudio() {
-                if (!this.audioBuffer || this.isPlaying) return;
+                this.log('🎵 playAudio() called by user interaction');
+                
+                if (this.isPlaying) {
+                    this.log('⚠️ Already playing, ignoring');
+                    return;
+                }
                 
                 try {
+                    this.updateStatus('🔧 AudioContextを初期化中...', 'playing');
+                    
+                    // ユーザーインタラクション時にAudioContext初期化
+                    if (!this.audioContext) {
+                        this.log('🔧 Initializing AudioContext on user interaction...');
+                        await this.initAudioContext();
+                    }
+                    
+                    // 音声デコード（まだ済んでいない場合）
+                    if (!this.audioBuffer && this.rawAudioBuffer) {
+                        this.log('🔄 Decoding audio data with AudioContext...');
+                        this.updateStatus('🔊 音声をデコード中...', 'playing');
+                        
+                        try {
+                            this.audioBuffer = await this.audioContext.decodeAudioData(this.rawAudioBuffer.slice(0));
+                            this.log(`✅ Audio decoded successfully: ${this.audioBuffer.duration}s`);
+                            this.showAudioInfo();
+                        } catch (decodeError) {
+                            this.log(`❌ Audio decoding failed: ${decodeError.message}`);
+                            throw new Error('音声デコードに失敗しました: ' + decodeError.message);
+                        }
+                    }
+                    
+                    if (!this.audioBuffer) {
+                        throw new Error('音声バッファが準備されていません');
+                    }
+                    
+                    this.log('🎵 Starting audio playback...');
+                    this.updateStatus('🎵 再生中...', 'playing');
+                    
                     // 既存の音源を停止
                     if (this.currentSource) {
                         this.currentSource.stop();
@@ -949,10 +966,11 @@
                         }
                     };
                     
-                    console.log('[Pearl Memorial] Playback started');
+                    this.log('🎉 Playback started successfully');
                     
                 } catch (error) {
-                    console.error('[Pearl Memorial] Playback failed:', error);
+                    this.log(`❌ Playback failed: ${error.message}`);
+                    this.log(`❌ Error stack: ${error.stack}`);
                     this.updateStatus('❌ 再生エラー: ' + error.message, 'error');
                 }
             }
