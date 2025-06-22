@@ -1,14 +1,22 @@
-const CACHE_NAME = 'offline-v1';
-const urlsToCache = ['/', '/index.html', '/style.css', '/main.js'];
+const CACHE_NAME = "pearl-cache-v1";
+const urlsToCache = [
+  "/",
+  "/play.html",
+  "/reader.html",
+];
 
-self.addEventListener('install', (event) => {
+// インストール：キャッシュ保存
+self.addEventListener("install", event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(urlsToCache))
   );
 });
 
-self.addEventListener('fetch', (event) => {
+// フェッチ：キャッシュから返す
+self.addEventListener("fetch", event => {
   event.respondWith(
-    caches.match(event.request).then((response) => response || fetch(event.request))
+    caches.match(event.request)
+      .then(response => response || fetch(event.request))
   );
 });
