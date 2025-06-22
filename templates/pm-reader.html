@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Pearl Memorial Reader</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+            -webkit-text-size-adjust: 100%;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .device-info {
+            text-align: center;
+            color: rgba(255,255,255,0.8);
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+        
+        .status {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .status.success {
+            background: rgba(212, 237, 218, 0.95);
+            color: #155724;
+        }
+        
+        .status.error {
+            background: rgba(248, 215, 218, 0.95);
+            color: #721c24;
+        }
+        
+        .status.playing {
+            background: rgba(209, 236, 241, 0.95);
+            color: #0c5460;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+        
+        .input-section {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .input-section h3 {
+            color: white;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.2em;
+        }
+        
+        .qr-input {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 10px;
+            font-size: 13px;
+            font-family: monospace;
+            margin: 15px 0;
+            resize: vertical;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+        
+        .btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 18px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            font-weight: 600;
+            width: 100%;
+            margin: 12px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn.secondary {
+            background: #6c757d;
+        }
+        
+        .btn.validate {
+            background: #17a2b8;
+        }
+        
+        .btn.clear {
+            background: #dc3545;
+        }
+        
+        .debug-info {
+            background: rgba(0,0,0,0.3);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            margin: 15px 0;
+            font-family: monospace;
+            word-break: break-all;
+            display: none;
+        }
+        
+        .instructions {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        
+        .instructions h4 {
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        
+        .instructions ol {
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐚 Pearl Memorial Reader</h1>
+            <p>完全オフライン音声再生</p>
+            <div class="device-info" id="deviceInfo">
+                <script>
+                    // デバイス情報を即座に表示
+                    (function() {
+                        const userAgent = navigator.userAgent;
+                        const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+                        const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+                        const hasTouch = 'ontouchstart' in window;
+                        const hasAudio = !!(window.AudioContext || window.webkitAudioContext);
+                        
+                        const deviceType = isIOS ? '📱 iOS' : 
+                                          /Android/.test(userAgent) ? '🤖 Android' : '💻 Desktop';
+                        const browser = isSafari ? 'Safari' : 
+                                       /Chrome/.test(userAgent) ? 'Chrome' : 'Other';
+                        
+                        document.getElementById('deviceInfo').textContent = 
+                            `${deviceType} | ${browser} | Touch: ${hasTouch ? 'Yes' : 'No'} | Audio: ${hasAudio ? 'Yes' : 'No'}`;
+                    })();
+                </script>
+            </div>
+        </div>
+        
+        <div class="status" id="status">QRコードデータを貼り付けて音声を再生してください</div>
+        
+        <div class="instructions">
+            <h4>📝 使用方法</h4>
+            <ol>
+                <li>Pearl Memorial QRコードをスマホカメラでスキャン</li>
+                <li>表示されたデータを下のテキストエリアに貼り付け</li>
+                <li>「▶️ 音声を再生」ボタンをタップ</li>
+                <li>音声が再生されます</li>
+            </ol>
+        </div>
+        
+        <div class="input-section">
+            <h3>🎵 音声再生</h3>
+            
+            <textarea class="qr-input" id="qrInput" 
+                      placeholder="QRコードから読み取ったデータをここに貼り付けてください...&#10;&#10;例: {&quot;pearl_memorial&quot;:&quot;v1.0&quot;,&quot;type&quot;:&quot;standalone_audio&quot;...}"></textarea>
+            
+            <button class="btn" id="playBtn">
+                ▶️ 音声を再生
+            </button>
+            
+            <button class="btn validate" id="validateBtn">
+                🔍 データを検証
+            </button>
+            
+            <button class="btn clear" id="clearBtn">
+                🗑️ クリア
+            </button>
+        </div>
+        
+        <div class="debug-info" id="debugInfo"></div>
+    </div>
+
+    <script>
+        // グローバル変数
+        let audioContext = null;
+        let currentSource = null;
+        
+        // DOM要素の取得
+        const statusEl = document.getElementById('status');
+        const qrInputEl = document.getElementById('qrInput');
+        const playBtnEl = document.getElementById('playBtn');
+        const validateBtnEl = document.getElementById('validateBtn');
+        const clearBtnEl = document.getElementById('clearBtn');
+        const debugInfoEl = document.getElementById('debugInfo');
+        
+        // ログ関数
+        function log(message) {
+            console.log('[Pearl Memorial]', message);
+        }
+        
+        // ステータス更新関数
+        function updateStatus(message, type = '') {
+            statusEl.textContent = message;
+            statusEl.className = type ? `status ${type}` : 'status';
+            log(`Status: ${message} (${type})`);
+        }
+        
+        // デバッグ情報表示
+        function showDebug(message) {
+            debugInfoEl.innerHTML = message;
+            debugInfoEl.style.display = 'block';
+        }
+        
+        function hideDebug() {
+            debugInfoEl.style.display = 'none';
+        }
+        
+        // AudioContext初期化
+        async function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    log('AudioContext created: ' + audioContext.state);
+                } catch (error) {
+                    log('AudioContext creation failed: ' + error.message);
+                    throw new Error('AudioContext作成に失敗しました');
+                }
+            }
+            
+            if (audioContext.state === 'suspended') {
+                try {
+                    await audioContext.resume();
+                    log('AudioContext resumed: ' + audioContext.state);
+                } catch (error) {
+                    log('AudioContext resume failed: ' + error.message);
+                    throw new Error('AudioContext再開に失敗しました');
+                }
+            }
+        }
+        
+        // 音声再生関数
+        async function playAudio() {
+            const qrData = qrInputEl.value.trim();
+            
+            if (!qrData) {
+                updateStatus('❌ QRデータを入力してください', 'error');
+                return;
+            }
+            
+            try {
+                // 既存の再生を停止
+                if (currentSource) {
+                    currentSource.stop();
+                    currentSource = null;
+                }
+                
+                updateStatus('🔄 データを解析中...');
+                
+                // JSON解析
+                let pearlData;
+                try {
+                    pearlData = JSON.parse(qrData);
+                    log('JSON parsed successfully');
+                } catch (error) {
+                    throw new Error('無効なJSONデータです: ' + error.message);
+                }
+                
+                // Pearl Memorial形式確認
+                if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
+                    throw new Error('Pearl Memorial QRコードではありません');
+                }
+                
+                updateStatus('🎵 音声データを準備中...');
+                
+                // AudioContext初期化
+                await initAudioContext();
+                
+                // 音声データ取得
+                const audioDataUri = pearlData.audio_data;
+                if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
+                    throw new Error('音声データが見つかりません');
+                }
+                
+                updateStatus('🔊 音声をデコード中...');
+                
+                // Base64デコード
+                const base64Data = audioDataUri.split(',')[1];
+                if (!base64Data) {
+                    throw new Error('Base64データが無効です');
+                }
+                
+                // バイナリ変換
+                const binaryString = atob(base64Data);
+                const arrayBuffer = new ArrayBuffer(binaryString.length);
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                for (let i = 0; i < binaryString.length; i++) {
+                    uint8Array[i] = binaryString.charCodeAt(i);
+                }
+                
+                log('Binary data length: ' + arrayBuffer.byteLength);
+                
+                // 音声デコード
+                let audioBuffer;
+                try {
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    log('Audio decoded: ' + audioBuffer.duration + 's');
+                } catch (error) {
+                    throw new Error('音声デコードに失敗しました: ' + error.message);
+                }
+                
+                // 音声再生
+                currentSource = audioContext.createBufferSource();
+                currentSource.buffer = audioBuffer;
+                currentSource.connect(audioContext.destination);
+                
+                const title = pearlData.metadata?.title || 'Pearl Memorial';
+                updateStatus('🎵 再生中: ' + title, 'playing');
+                
+                // デバッグ情報表示
+                showDebug(`
+                    Duration: ${audioBuffer.duration.toFixed(2)}s<br>
+                    Sample Rate: ${audioBuffer.sampleRate}Hz<br>
+                    Channels: ${audioBuffer.numberOfChannels}<br>
+                    Data Size: ${arrayBuffer.byteLength} bytes
+                `);
+                
+                currentSource.onended = () => {
+                    updateStatus('✅ 再生完了 - ' + title, 'success');
+                    currentSource = null;
+                    log('Playback ended');
+                };
+                
+                // 再生開始
+                currentSource.start(0);
+                log('Playback started');
+                
+            } catch (error) {
+                log('Playback error: ' + error.message);
+                updateStatus('❌ エラー: ' + error.message, 'error');
+                showDebug('Error: ' + error.message);
+            }
+        }
+        
+        // データ検証関数
+        function validateData() {
+            const qrData = qrInputEl.value.trim();
+            
+            if (!qrData) {
+                updateStatus('❌ 検証するデータを入力してください', 'error');
+                return;
+            }
+            
+            try {
+                updateStatus('🔍 データを検証中...');
+                
+                // JSON解析
+                const pearlData = JSON.parse(qrData);
+                
+                let result = '✅ JSON解析成功<br>';
+                
+                // 各フィールドの検証
+                if (pearlData.pearl_memorial === 'v1.0') {
+                    result += '✅ Pearl Memorial v1.0 形式<br>';
+                } else {
+                    result += '❌ pearl_memorial フィールドが無効<br>';
+                }
+                
+                if (pearlData.type === 'standalone_audio') {
+                    result += '✅ standalone_audio タイプ<br>';
+                } else {
+                    result += '❌ type フィールドが無効<br>';
+                }
+                
+                if (pearlData.audio_data && pearlData.audio_data.startsWith('data:audio/')) {
+                    result += '✅ 音声データURI正常<br>';
+                    result += `📏 音声データ長: ${pearlData.audio_data.length} 文字<br>`;
+                } else {
+                    result += '❌ 音声データURIが無効<br>';
+                }
+                
+                if (pearlData.metadata) {
+                    result += '✅ メタデータ存在<br>';
+                    result += `📝 タイトル: ${pearlData.metadata.title || 'なし'}<br>`;
+                } else {
+                    result += '❌ メタデータが見つかりません<br>';
+                }
+                
+                result += `<br>📊 総データ長: ${qrData.length} 文字`;
+                
+                showDebug(result);
+                updateStatus('✅ データ検証完了', 'success');
+                
+            } catch (error) {
+                log('Validation error: ' + error.message);
+                updateStatus('❌ 検証エラー: ' + error.message, 'error');
+                showDebug(`
+                    ❌ JSON解析エラー<br>
+                    エラー: ${error.message}<br>
+                    データ長: ${qrData.length} 文字<br>
+                    データプレビュー: ${qrData.substring(0, 100)}...
+                `);
+            }
+        }
+        
+        // クリア関数
+        function clearData() {
+            qrInputEl.value = '';
+            updateStatus('QRコードデータを貼り付けて音声を再生してください');
+            hideDebug();
+            
+            // 再生中の音声を停止
+            if (currentSource) {
+                currentSource.stop();
+                currentSource = null;
+            }
+            
+            log('Data cleared');
+        }
+        
+        // イベントリスナー設定
+        function setupEventListeners() {
+            // 再生ボタン
+            playBtnEl.addEventListener('click', playAudio);
+            playBtnEl.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                playAudio();
+            });
+            
+            // 検証ボタン
+            validateBtnEl.addEventListener('click', validateData);
+            validateBtnEl.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                validateData();
+            });
+            
+            // クリアボタン
+            clearBtnEl.addEventListener('click', clearData);
+            clearBtnEl.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                clearData();
+            });
+            
+            // AudioContext初期化用のユーザーインタラクション
+            document.addEventListener('click', async function() {
+                if (!audioContext) {
+                    try {
+                        await initAudioContext();
+                    } catch (error) {
+                        log('AudioContext init failed on click: ' + error.message);
+                    }
+                }
+            }, { once: true });
+            
+            document.addEventListener('touchend', async function() {
+                if (!audioContext) {
+                    try {
+                        await initAudioContext();
+                    } catch (error) {
+                        log('AudioContext init failed on touch: ' + error.message);
+                    }
+                }
+            }, { once: true });
+            
+            log('Event listeners attached');
+        }
+        
+        // 初期化
+        function init() {
+            log('Pearl Memorial Reader initialized');
+            setupEventListeners();
+            
+            // iOS Safari対応
+            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                log('iOS device detected');
+                document.body.style.webkitUserSelect = 'none';
+                document.body.style.webkitTouchCallout = 'none';
+            }
+        }
+        
+        // DOM読み込み完了後に初期化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+</body>
+</html>
