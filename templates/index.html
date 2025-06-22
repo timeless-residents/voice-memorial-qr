@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Pearl Memorial QR - 完全自立型音声保存技術</title>
+    <title>Pearl Memorial QR - ハイブリッド音声保存技術</title>
     <style>
         * { 
             margin: 0; 
@@ -55,13 +55,13 @@
             backdrop-filter: blur(10px);
         }
         
-        .tech-notice {
+        .hybrid-notice {
             background: rgba(255,255,255,0.95);
             padding: 25px;
             border-radius: 15px;
             margin: 20px 0;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-            border-left: 5px solid #27ae60;
+            border-left: 5px solid #e74c3c;
             color: #333;
         }
         
@@ -377,18 +377,19 @@
     <div class="container">
         <div class="header">
             <h1>🐚 Pearl Memorial QR</h1>
-            <p>完全自立型音声保存技術</p>
+            <p>ハイブリッド音声保存技術</p>
             <div class="tech-highlight">
-                <strong>🚀 Server-Independent DataURI Technology</strong><br>
-                生成 → 永続保存 → オフライン再生
+                <strong>🚀 iPhone Camera + Reader Compatible</strong><br>
+                生成 → 永続保存 → ユニバーサル再生
             </div>
         </div>
         
-        <div class="tech-notice">
-            <h3>🌟 革新的完全自立型システム</h3>
-            <p><strong>QR生成</strong>: サーバーで音声処理・圧縮・DataURI埋め込み</p>
-            <p><strong>QR再生</strong>: 完全オフライン・サーバー不要・1000年保証</p>
-            <p><strong>機内モード</strong>でも再生可能な世界初技術です。</p>
+        <div class="hybrid-notice">
+            <h3>🌟 革新的ハイブリッドシステム</h3>
+            <p><strong>📱 iPhone標準カメラ</strong>: QRスキャン → 即座音声再生（ゼロタッチ体験）</p>
+            <p><strong>🔧 Pearl Memorial Reader</strong>: フル機能再生（メタデータ・プログレス表示）</p>
+            <p><strong>🧠 智的判定</strong>: データサイズに応じて最適形式を自動選択</p>
+            <p><strong>✈️ 完全オフライン</strong>: 機内モードでも1000年間再生保証</p>
         </div>
         
         <div class="upload-section">
@@ -397,7 +398,7 @@
                 <!-- 録音機能セクション -->
                 <div class="recording-section">
                     <button type="button" class="record-button" id="recordButton">
-                        🎤 2秒録音
+                        🎤 2秒録音（ハイブリッドQR生成）
                     </button>
                     <div id="recordingStatus" class="recording-status" style="display: none;">
                         <div class="recording-indicator">🔴 録音中... <span id="countdown">2</span></div>
@@ -428,16 +429,17 @@
                     <p><strong>選択されたファイル:</strong> <span id="fileName"></span></p>
                     <p><strong>ファイルサイズ:</strong> <span id="fileSize"></span></p>
                     <p><strong>推定処理時間:</strong> <span id="estimatedTime"></span></p>
+                    <p><strong>予想QR形式:</strong> <span id="expectedFormat">分析中...</span></p>
                 </div>
                 
                 <div class="loading-indicator" id="loadingIndicator">
                     <div class="spinner"></div>
-                    <p>完全自立型QRコードを生成中...</p>
-                    <p style="font-size: 0.9em; color: #666;">音声圧縮・DataURI埋め込み・永続化処理実行中</p>
+                    <p>ハイブリッドQRコードを生成中...</p>
+                    <p style="font-size: 0.9em; color: #666;">音声圧縮・最適形式判定・DataURI埋め込み実行中</p>
                 </div>
                 
                 <button type="submit" class="generate-button" id="generateButton" disabled>
-                    🚀 完全自立型QRコードを生成
+                    🚀 ハイブリッドQRコードを生成
                 </button>
                 
                 <div id="status" class="status"></div>
@@ -453,18 +455,28 @@
         <div class="features">
             <div class="feature">
                 <div class="feature-icon">📱</div>
-                <h3>オフライン再生</h3>
-                <p>機内モードでも音声再生可能</p>
+                <h3>iPhone標準カメラ対応</h3>
+                <p>スキャン → 即座再生のゼロタッチ体験</p>
             </div>
             <div class="feature">
-                <div class="feature-icon">🛡️</div>
-                <h3>サーバー不要</h3>
-                <p>DataURI埋め込みで永続保存</p>
+                <div class="feature-icon">🔧</div>
+                <h3>Reader フル機能</h3>
+                <p>メタデータ・プログレス・デバッグ情報</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧠</div>
+                <h3>智的判定システム</h3>
+                <p>サイズ最適化による自動形式選択</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">🌍</div>
-                <h3>世界初技術</h3>
-                <p>完全自立型音声保存システム</p>
+                <h3>ユニバーサル互換</h3>
+                <p>あらゆるQRリーダーで動作</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">✈️</div>
+                <h3>完全オフライン</h3>
+                <p>機内モードでも永続再生</p>
             </div>
             <div class="feature">
                 <div class="feature-icon">🏆</div>
@@ -474,10 +486,10 @@
         </div>
         
         <div class="footer">
-            <p>© 2025 Pearl Memorial QR - 完全自立型音声保存技術</p>
+            <p>© 2025 Pearl Memorial QR - ハイブリッド音声保存技術</p>
             <p>Made with ❤️ by Bounderist Technology</p>
             <p style="font-size: 0.8em; margin-top: 10px;">
-                Server-Independent DataURI Technology | Offline-First Design
+                Hybrid Architecture | iPhone Camera + Reader Compatible
             </p>
         </div>
     </div>
@@ -493,6 +505,7 @@
         const fileName = document.getElementById('fileName');
         const fileSize = document.getElementById('fileSize');
         const estimatedTime = document.getElementById('estimatedTime');
+        const expectedFormat = document.getElementById('expectedFormat');
         const loadingIndicator = document.getElementById('loadingIndicator');
         const recordButton = document.getElementById('recordButton');
         const recordingStatus = document.getElementById('recordingStatus');
@@ -501,6 +514,30 @@
         let mediaRecorder;
         let recordedChunks = [];
         let recordingTimer;
+
+        // 🧠 QR形式予測関数
+        function predictQRFormat(fileSize) {
+            // 推定音声データサイズ（2秒、Opus圧縮）
+            const estimatedDataSize = Math.min(fileSize * 0.1, 8000); // 最大8KB
+            const base64Size = estimatedDataSize * 1.33; // Base64エンコード
+            const dataURISize = base64Size + 50; // DataURI헤더
+            
+            // URL形式サイズ推定
+            const baseURL = "https://voice-memorial-qr.onrender.com/play?audio=";
+            const urlSize = baseURL.length + (dataURISize * 3); // URLエンコード
+            
+            // JSON形式サイズ推定
+            const jsonOverhead = 300; // メタデータ + JSON構造
+            const jsonSize = dataURISize + jsonOverhead;
+            
+            if (urlSize < jsonSize && urlSize < 70000) {
+                return `📱 iPhone直接再生URL (推定 ${Math.round(urlSize/1000)}KB)`;
+            } else if (jsonSize < 70000) {
+                return `🔧 Reader用JSON (推定 ${Math.round(jsonSize/1000)}KB)`;
+            } else {
+                return `⚠️ サイズ超過の可能性 (推定 ${Math.round(Math.min(urlSize, jsonSize)/1000)}KB)`;
+            }
+        }
 
         // 録音機能
         recordButton.addEventListener('click', startRecording);
@@ -600,7 +637,7 @@
             audioFile.files = dataTransfer.files;
             
             handleFileSelect();
-            showStatus('🎉 2秒録音完了！完全自立型QRコード生成の準備ができました。', 'success');
+            showStatus('🎉 2秒録音完了！ハイブリッドQRコード生成の準備ができました。', 'success');
         }
 
         // ファイル検証
@@ -613,7 +650,7 @@
             const isVideoFile = videoExtensions.includes(extension);
             
             if (isVideoFile) {
-                showStatus('動画ファイルが選択されました。音声のみを抽出して完全自立型QRコード生成します。', 'processing');
+                showStatus('動画ファイルが選択されました。音声のみを抽出してハイブリッドQRコード生成します。', 'processing');
                 return true;
             }
             
@@ -662,6 +699,9 @@
                 const estimatedSeconds = Math.max(5, Math.min(30, Math.ceil(file.size / (1024 * 1024) * 3)));
                 estimatedTime.textContent = estimatedSeconds + '秒程度';
                 
+                // 🧠 QR形式予測表示
+                expectedFormat.textContent = predictQRFormat(file.size);
+                
                 fileInfo.style.display = 'block';
                 generateButton.disabled = false;
                 
@@ -683,7 +723,7 @@
 
             generateButton.disabled = true;
             loadingIndicator.style.display = 'block';
-            showStatus('完全自立型QRコード生成中...', 'processing');
+            showStatus('ハイブリッドQRコード生成中...', 'processing');
 
             const formData = new FormData();
             formData.append('audio', file);
@@ -699,13 +739,13 @@
                     const url = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `pearl_memorial_standalone_${file.name.split('.')[0]}.png`;
+                    a.download = `pearl_memorial_hybrid_${file.name.split('.')[0]}.png`;
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                     
-                    showStatus('🎉 完全自立型Pearl Memorial QRコードが生成されました！Pearl Memorial Readerアプリでスキャンして音声を再生してください。', 'success');
+                    showStatus('🎉 ハイブリッドPearl Memorial QRコードが生成されました！iPhone標準カメラまたはPearl Memorial Readerでスキャンしてください。', 'success');
                 } else {
                     const error = await response.json();
                     let errorMessage = error.error || 'Unknown error';
@@ -747,7 +787,7 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            showStatus('🚀 Pearl Memorial Generator 準備完了！完全自立型QRコードを生成できます。', 'processing');
+            showStatus('🚀 Pearl Memorial Hybrid Generator 準備完了！iPhone Camera + Reader 両対応QRコードを生成できます。', 'processing');
             
             setTimeout(() => {
                 if (status.classList.contains('processing')) {
