@@ -247,6 +247,100 @@
             display: none;
         }
         
+        /* 🚀 メタデータ入力セクション */
+        .metadata-section {
+            margin-top: 25px;
+            padding: 25px;
+            background: rgba(155, 89, 182, 0.05);
+            border: 2px solid rgba(155, 89, 182, 0.2);
+            border-radius: 15px;
+        }
+        
+        .metadata-section h3 {
+            color: #9b59b6;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .metadata-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .metadata-field {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .metadata-field label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #9b59b6;
+            font-size: 0.9em;
+        }
+        
+        .metadata-field input,
+        .metadata-field textarea,
+        .metadata-field select {
+            padding: 12px;
+            border: 2px solid rgba(155, 89, 182, 0.2);
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            background: white;
+        }
+        
+        .metadata-field input:focus,
+        .metadata-field textarea:focus,
+        .metadata-field select:focus {
+            outline: none;
+            border-color: #9b59b6;
+            box-shadow: 0 0 0 3px rgba(155, 89, 182, 0.1);
+        }
+        
+        .metadata-field textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .metadata-field select {
+            cursor: pointer;
+        }
+        
+        .metadata-preview {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.2);
+            border-radius: 10px;
+        }
+        
+        .metadata-preview h4 {
+            color: #3498db;
+            margin-bottom: 10px;
+            font-size: 1em;
+        }
+        
+        .preview-item {
+            margin: 5px 0;
+            padding: 5px 0;
+            font-size: 0.9em;
+            color: #2c3e50;
+        }
+        
+        .preview-label {
+            font-weight: 600;
+            color: #9b59b6;
+        }
+        
         .generate-button {
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             color: white;
@@ -512,6 +606,64 @@
                     <p><strong>予想QR形式:</strong> <span id="expectedFormat">分析中...</span></p>
                 </div>
                 
+                <!-- 🚀 メタデータ入力セクション -->
+                <div id="metadataSection" class="metadata-section" style="display: none;">
+                    <h3>📝 メタデータ入力（任意）</h3>
+                    <p class="metadata-description">音声に情報を追加して、より詳細なQRコードを生成できます</p>
+                    
+                    <div class="metadata-grid">
+                        <div class="metadata-field">
+                            <label for="audioTitle">📝 タイトル</label>
+                            <input type="text" id="audioTitle" name="title" placeholder="例: パパからイトちゃんへのメッセージ" maxlength="100">
+                        </div>
+                        
+                        <div class="metadata-field">
+                            <label for="recipient">💝 受取人</label>
+                            <input type="text" id="recipient" name="recipient" placeholder="例: 佐藤糸" maxlength="50">
+                        </div>
+                        
+                        <div class="metadata-field">
+                            <label for="description">💬 説明・メッセージ</label>
+                            <textarea id="description" name="description" placeholder="例: 4歳の誕生日おめでとう！パパからの愛をこめて" maxlength="200" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="metadata-field">
+                            <label for="emotionLevel">❤️ 感情レベル</label>
+                            <select id="emotionLevel" name="emotion_level">
+                                <option value="">選択してください</option>
+                                <option value="最大愛情">最大愛情 💖</option>
+                                <option value="深い愛">深い愛 ❤️</option>
+                                <option value="温かい気持ち">温かい気持ち 🧡</option>
+                                <option value="応援">応援 💪</option>
+                                <option value="感謝">感謝 🙏</option>
+                                <option value="励まし">励まし 🌟</option>
+                            </select>
+                        </div>
+                        
+                        <div class="metadata-field">
+                            <label for="specialOccasion">🎉 特別な機会</label>
+                            <select id="specialOccasion" name="special_occasion">
+                                <option value="">選択してください</option>
+                                <option value="誕生日">誕生日 🎂</option>
+                                <option value="卒業・入学">卒業・入学 🎓</option>
+                                <option value="結婚記念日">結婚記念日 💒</option>
+                                <option value="出産">出産 👶</option>
+                                <option value="成人式">成人式 🌸</option>
+                                <option value="クリスマス">クリスマス 🎄</option>
+                                <option value="お正月">お正月 🎍</option>
+                                <option value="母の日・父の日">母の日・父の日 👨‍👩‍👧</option>
+                                <option value="その他記念日">その他記念日 📅</option>
+                                <option value="日常の記録">日常の記録 📖</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="metadata-preview" id="metadataPreview" style="display: none;">
+                        <h4>📊 メタデータプレビュー</h4>
+                        <div id="previewContent"></div>
+                    </div>
+                </div>
+                
                 <div class="loading-indicator" id="loadingIndicator">
                     <div class="spinner"></div>
                     <p>ハイブリッドQRコードを生成中...</p>
@@ -720,7 +872,7 @@
             audioFile.files = dataTransfer.files;
             
             handleFileSelect();
-            showStatus('🎉 2秒録音完了！ハイブリッドQRコード生成の準備ができました。', 'success');
+            showStatus('🎉 2秒録音完了！メタデータを入力してハイブリッドQRコード生成の準備ができました。', 'success');
         }
 
         // ファイル検証
@@ -786,6 +938,10 @@
                 expectedFormat.textContent = predictQRFormat(file.size);
                 
                 fileInfo.style.display = 'block';
+                
+                // 🚀 メタデータセクション表示
+                document.getElementById('metadataSection').style.display = 'block';
+                
                 generateButton.disabled = false;
                 
                 if (file.size > 2 * 1024 * 1024) {
@@ -810,6 +966,19 @@
 
             const formData = new FormData();
             formData.append('audio', file);
+            
+            // 🚀 メタデータ追加
+            const title = document.getElementById('audioTitle').value.trim();
+            const recipient = document.getElementById('recipient').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const emotionLevel = document.getElementById('emotionLevel').value;
+            const specialOccasion = document.getElementById('specialOccasion').value;
+            
+            if (title) formData.append('title', title);
+            if (recipient) formData.append('recipient', recipient);
+            if (description) formData.append('description', description);
+            if (emotionLevel) formData.append('emotion_level', emotionLevel);
+            if (specialOccasion) formData.append('special_occasion', specialOccasion);
 
             try {
                 const response = await fetch('/generate', {
@@ -828,7 +997,8 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                     
-                    showStatus('🎉 ハイブリッドPearl Memorial QRコードが生成されました！iPhone標準カメラまたはPearl Memorial Readerでスキャンしてください。', 'success');
+                    const metadataInfo = title ? `（タイトル: ${title}）` : '';
+                    showStatus(`🎉 ハイブリッドPearl Memorial QRコードが生成されました${metadataInfo}！iPhone標準カメラまたはPearl Memorial Readerでスキャンしてください。`, 'success');
                 } else {
                     const error = await response.json();
                     let errorMessage = error.error || 'Unknown error';
@@ -872,12 +1042,56 @@
         document.addEventListener('DOMContentLoaded', () => {
             showStatus('🚀 Pearl Memorial QR Generator 準備完了！音声録音またはファイルアップロードでハイブリッドQRコードを生成できます。', 'processing');
             
+            // 🚀 メタデータプレビュー機能
+            setupMetadataPreview();
+            
             setTimeout(() => {
                 if (status.classList.contains('processing')) {
                     status.style.display = 'none';
                 }
             }, 3000);
         });
+        
+        // 🚀 メタデータプレビュー機能
+        function setupMetadataPreview() {
+            const fields = ['audioTitle', 'recipient', 'description', 'emotionLevel', 'specialOccasion'];
+            const previewEl = document.getElementById('metadataPreview');
+            const previewContent = document.getElementById('previewContent');
+            
+            fields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field) {
+                    field.addEventListener('input', updateMetadataPreview);
+                    field.addEventListener('change', updateMetadataPreview);
+                }
+            });
+            
+            function updateMetadataPreview() {
+                const values = {
+                    title: document.getElementById('audioTitle').value.trim(),
+                    recipient: document.getElementById('recipient').value.trim(),
+                    description: document.getElementById('description').value.trim(),
+                    emotionLevel: document.getElementById('emotionLevel').value,
+                    specialOccasion: document.getElementById('specialOccasion').value
+                };
+                
+                const hasData = Object.values(values).some(value => value);
+                
+                if (hasData) {
+                    let preview = '';
+                    if (values.title) preview += `<div class="preview-item"><span class="preview-label">📝 タイトル:</span> ${values.title}</div>`;
+                    if (values.recipient) preview += `<div class="preview-item"><span class="preview-label">💝 受取人:</span> ${values.recipient}</div>`;
+                    if (values.description) preview += `<div class="preview-item"><span class="preview-label">💬 説明:</span> ${values.description}</div>`;
+                    if (values.emotionLevel) preview += `<div class="preview-item"><span class="preview-label">❤️ 感情:</span> ${values.emotionLevel}</div>`;
+                    if (values.specialOccasion) preview += `<div class="preview-item"><span class="preview-label">🎉 機会:</span> ${values.specialOccasion}</div>`;
+                    
+                    previewContent.innerHTML = preview;
+                    previewEl.style.display = 'block';
+                } else {
+                    previewEl.style.display = 'none';
+                }
+            }
+        }
     </script>
 </body>
 </html>
