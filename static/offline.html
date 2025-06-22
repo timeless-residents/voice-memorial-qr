@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2c3e50">
+    <title>Pearl Memorial - オフライン</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .offline-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 500px;
+            width: 100%;
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .offline-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        
+        .message {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        
+        .cached-content {
+            background: rgba(39, 174, 96, 0.1);
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+            border: 1px solid rgba(39, 174, 96, 0.3);
+        }
+        
+        .refresh-button {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .refresh-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        }
+        
+        .navigation-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 30px;
+        }
+        
+        .nav-link {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover {
+            text-decoration: underline;
+            color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">📵</div>
+        <h1>オフラインモード</h1>
+        <div class="subtitle">Pearl Memorial QR</div>
+        
+        <div class="message">
+            インターネット接続がありません。<br>
+            一部機能が制限されています。
+        </div>
+        
+        <div class="cached-content">
+            <p>利用可能な機能:</p>
+            <ul style="list-style: none; padding: 10px 0;">
+                <li>✅ 保存済みQRコードの表示</li>
+                <li>✅ キャッシュ済み音声の再生</li>
+                <li>❌ 新規QRコード生成（オンライン必須）</li>
+            </ul>
+        </div>
+        
+        <button class="refresh-button" onclick="window.location.reload()">
+            🔄 再読み込み
+        </button>
+        
+        <div class="navigation-links">
+            <a href="/" class="nav-link">🏠 ホームに戻る</a>
+            <a href="/reader" class="nav-link">📱 Readerに移動</a>
+            <a href="/play" class="nav-link">🎵 プレイヤーに移動</a>
+        </div>
+    </div>
+    
+    <script>
+        // オンラインになったら自動的にリロード
+        window.addEventListener('online', function() {
+            window.location.reload();
+        });
+    </script>
+</body>
+</html>

@@ -3,21 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Pearl Memorial QR - QRコードリーダー。QRコードデータを検証して音声再生へ誘導します。">
+
+    <!-- PWA設定 -->
+    <meta name="theme-color" content="#2c3e50">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pearl Memorial">
 
+    <!-- iOS用アイコン -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='icon-192.png') }}">
+    <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='icon-512.png') }}">
+
+    <!-- Webマニフェスト -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#2c3e50">
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("/static/service-worker.js").then(() => {
-      console.log("✅ Service Worker registered.");
-    });
-  }
-</script>
+
+    <!-- サービスワーカー登録 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register("{{ url_for('static', filename='service-worker.js') }}").then(function(registration) {
+            console.log("✅ Service Worker registered with scope:", registration.scope);
+
+            // 更新確認
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // 新しいバージョンがインストールされた
+                  showUpdateNotice();
+                }
+              });
+            });
+          }).catch(function(error) {
+            console.log("❌ Service Worker registration failed:", error);
+          });
+
+          // すでにコントロールされているが、更新があるかもしれない場合
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+        });
+      }
+
+      let refreshing = false;
+
+      // 更新通知を表示
+      function showUpdateNotice() {
+        const updateNotice = document.createElement('div');
+        updateNotice.id = 'updateNotice';
+        updateNotice.style.position = 'fixed';
+        updateNotice.style.bottom = '20px';
+        updateNotice.style.right = '20px';
+        updateNotice.style.backgroundColor = 'rgba(46, 204, 113, 0.95)';
+        updateNotice.style.color = 'white';
+        updateNotice.style.padding = '15px 20px';
+        updateNotice.style.borderRadius = '10px';
+        updateNotice.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
+        updateNotice.style.zIndex = '10000';
+        updateNotice.style.display = 'flex';
+        updateNotice.style.alignItems = 'center';
+        updateNotice.style.justifyContent = 'space-between';
+        updateNotice.style.maxWidth = '350px';
+
+        updateNotice.innerHTML = `
+          <div style="margin-right: 15px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">🚀 新バージョンが利用可能です</div>
+            <div style="font-size: 0.9em;">アップデートするには再読み込みしてください</div>
+          </div>
+          <button id="updateButton" style="background: white; color: #27ae60; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">更新</button>
+        `;
+
+        document.body.appendChild(updateNotice);
+
+        document.getElementById('updateButton').addEventListener('click', () => {
+          if (navigator.serviceWorker.controller) {
+            // 更新のためリロード
+            window.location.reload();
+            refreshing = true;
+          }
+        });
+      }
+    </script>
+
+    <!-- オフライン通知機能 -->
+    <script>
+      window.addEventListener('online', function() {
+        if (document.getElementById('offlineNotice')) {
+          document.getElementById('offlineNotice').style.display = 'none';
+        }
+      });
+
+      window.addEventListener('offline', function() {
+        if (!document.getElementById('offlineNotice')) {
+          const notice = document.createElement('div');
+          notice.id = 'offlineNotice';
+          notice.style.position = 'fixed';
+          notice.style.top = '0';
+          notice.style.left = '0';
+          notice.style.right = '0';
+          notice.style.backgroundColor = 'rgba(231, 76, 60, 0.9)';
+          notice.style.color = 'white';
+          notice.style.padding = '10px';
+          notice.style.textAlign = 'center';
+          notice.style.zIndex = '9999';
+          notice.style.fontWeight = 'bold';
+          notice.innerHTML = '📵 オフラインモード - 機能が制限されています';
+          document.body.appendChild(notice);
+        } else {
+          document.getElementById('offlineNotice').style.display = 'block';
+        }
+      });
+    </script>
+
     <title>Pearl Memorial Reader - QRデータ読み取り</title>
+
+    <noscript>
+        <style>
+            .noscript-warning {
+                background-color: #e74c3c;
+                color: white;
+                text-align: center;
+                padding: 15px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 9999;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                font-weight: bold;
+            }
+        </style>
+        <div class="noscript-warning">
+            ⚠️ JavaScriptが無効です。Pearl Memorial QRの機能を使うにはJavaScriptを有効にしてください。
+        </div>
+    </noscript>
+
     <style>
         * { 
             margin: 0; 
