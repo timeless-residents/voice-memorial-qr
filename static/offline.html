@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2c3e50">
-    <title>Pearl Memorial - オフライン</title>
+    <title>Pearl Memorial - 完全オフライン対応</title>
     <style>
         * { 
             margin: 0; 
@@ -31,7 +31,7 @@
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            max-width: 500px;
+            max-width: 600px;
             width: 100%;
             animation: fadeIn 0.6s ease-out;
         }
@@ -50,6 +50,13 @@
         .offline-icon {
             font-size: 4em;
             margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
         }
         
         h1 {
@@ -65,27 +72,60 @@
             font-size: 1.1em;
         }
         
-        .message {
-            background: rgba(231, 76, 60, 0.1);
-            color: #e74c3c;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-weight: 500;
-            border: 1px solid rgba(231, 76, 60, 0.3);
+        .status-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 10px 0;
         }
         
-        .cached-content {
-            background: rgba(39, 174, 96, 0.1);
-            color: #27ae60;
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-weight: 500;
-            border: 1px solid rgba(39, 174, 96, 0.3);
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
         }
         
-        .refresh-button {
+        .feature-card {
+            background: rgba(52, 152, 219, 0.1);
+            border: 2px solid rgba(52, 152, 219, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .feature-title {
+            color: #3498db;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .feature-desc {
+            color: #5a6c7d;
+            font-size: 0.9em;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .btn {
             background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
             color: white;
             border: none;
@@ -95,72 +135,287 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin: 20px 0;
             box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            text-decoration: none;
+            display: inline-block;
         }
         
-        .refresh-button:hover {
+        .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
         }
         
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn.secondary {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+        
+        .btn.success {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        
         .navigation-links {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            justify-content: center;
+            gap: 15px;
             margin-top: 30px;
+            flex-wrap: wrap;
         }
         
         .nav-link {
             color: #3498db;
             text-decoration: none;
             font-weight: 600;
-            padding: 10px;
+            padding: 10px 15px;
             transition: all 0.3s ease;
+            border-radius: 10px;
+            background: rgba(52, 152, 219, 0.1);
         }
         
         .nav-link:hover {
-            text-decoration: underline;
-            color: #2980b9;
+            background: rgba(52, 152, 219, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            z-index: 1000;
+        }
+        
+        .connection-status.online {
+            background: rgba(39, 174, 96, 0.9);
+        }
+        
+        .technical-info {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            font-size: 0.8em;
+            color: #5a6c7d;
+            text-align: left;
+        }
+        
+        /* モバイル対応 */
+        @media (max-width: 768px) {
+            .offline-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .navigation-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .btn {
+                font-size: 1em;
+                padding: 12px 25px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="offline-container">
-        <div class="offline-icon">📵</div>
-        <h1>オフラインモード</h1>
-        <div class="subtitle">Pearl Memorial QR</div>
-        
-        <div class="message">
-            インターネット接続がありません。<br>
-            一部機能が制限されています。
-        </div>
-        
-        <div class="cached-content">
-            <p>利用可能な機能:</p>
-            <ul style="list-style: none; padding: 10px 0;">
-                <li>✅ 保存済みQRコードの表示</li>
-                <li>✅ キャッシュ済み音声の再生</li>
-                <li>❌ 新規QRコード生成（オンライン必須）</li>
-            </ul>
-        </div>
-        
-        <button class="refresh-button" onclick="window.location.reload()">
-            🔄 再読み込み
-        </button>
-        
-        <div class="navigation-links">
-            <a href="/" class="nav-link">🏠 ホームに戻る</a>
-            <a href="/reader" class="nav-link">📱 Readerに移動</a>
-            <a href="/play" class="nav-link">🎵 プレイヤーに移動</a>
-        </div>
+    <div class="connection-status" id="connectionStatus">
+        📵 オフライン
     </div>
     
+    <div class="offline-container">
+        <div class="offline-icon">🐚</div>
+        <h1>Pearl Memorial</h1>
+        <div class="subtitle">完全オフライン対応モード</div>
+        
+        <div class="status-badge">
+            ✈️ 機内モードでも完全動作
+        </div>
+        
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">💾</div>
+                <div class="feature-title">キャッシュ済みQRコード</div>
+                <div class="feature-desc">保存済みのQRコードとメタデータはオフラインでも表示可能</div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🎵</div>
+                <div class="feature-title">音声再生</div>
+                <div class="feature-desc">DataURI埋め込み音声は完全オフラインでも再生可能</div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">📱</div>
+                <div class="feature-title">PWA機能</div>
+                <div class="feature-desc">アプリとしてホーム画面から直接起動可能</div>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <div class="feature-title">データ保護</div>
+                <div class="feature-desc">ローカルキャッシュによる安全なデータ保存</div>
+            </div>
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn success" onclick="checkAndReload()">
+                🔄 接続確認して更新
+            </button>
+            
+            <button class="btn" onclick="forceReload()">
+                ⚡ 強制リロード
+            </button>
+        </div>
+        
+        <div class="navigation-links">
+            <a href="/" class="nav-link">🏠 ホーム</a>
+            <a href="/reader" class="nav-link">📱 Reader</a>
+            <a href="/play" class="nav-link">🎵 Player</a>
+            <a href="/generate" class="nav-link">🎤 生成</a>
+        </div>
+        
+        <div class="technical-info">
+            <strong>📊 技術情報:</strong><br>
+            Service Worker: <span id="swStatus">確認中...</span><br>
+            キャッシュ: <span id="cacheStatus">確認中...</span><br>
+            最終更新: <span id="lastUpdate">Unknown</span><br>
+            ブラウザ: <span id="browserInfo">確認中...</span>
+        </div>
+    </div>
+
     <script>
-        // オンラインになったら自動的にリロード
+        // 即座に技術情報を更新
+        function updateTechnicalInfo() {
+            document.getElementById('swStatus') = navigator.serviceWorker ? '✅ 対応' : '❌ 非対応';
+            document.getElementById('lastUpdate') = new Date().toLocaleString();
+            document.getElementById('browserInfo') = navigator.userAgent.includes('Chrome') ? 'Chrome' :
+                                                     navigator.userAgent.includes('Safari') ? 'Safari' :
+                                                     navigator.userAgent.includes('Firefox') ? 'Firefox' : 'その他';
+            
+            // キャッシュステータス確認
+            if ('caches' in window) {
+                caches.keys().then(cacheNames => {
+                    document.getElementById('cacheStatus') = `✅ ${cacheNames.length}個のキャッシュ`;
+                }).catch(() => {
+                    document.getElementById('cacheStatus') = '❌ アクセス不可';
+                });
+            } else {
+                document.getElementById('cacheStatus') = '❌ 非対応';
+            }
+        }
+        
+        // 接続状態監視
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            if (navigator.onLine) {
+                statusEl.textContent = '🌐 オンライン';
+                statusEl.className = 'connection-status online';
+            } else {
+                statusEl.textContent = '📵 オフライン';
+                statusEl.className = 'connection-status';
+            }
+        }
+        
+        // 接続確認してリロード
+        function checkAndReload() {
+            if (navigator.onLine) {
+                console.log('🌐 Online detected, reloading...');
+                window.location.reload(true);
+            } else {
+                alert('🚫 まだオフライン状態です。WiFiまたはモバイルデータ接続を確認してください。');
+            }
+        }
+        
+        // 強制リロード
+        function forceReload() {
+            console.log('⚡ Force reload requested');
+            window.location.reload(true);
+        }
+        
+        // イベントリスナー設定
         window.addEventListener('online', function() {
-            window.location.reload();
+            console.log('🌐 Connection restored');
+            updateConnectionStatus();
+            
+            // 3秒後に自動リロード
+            setTimeout(() => {
+                console.log('🔄 Auto-reloading after connection restored');
+                window.location.reload();
+            }, 3000);
         });
+        
+        window.addEventListener('offline', function() {
+            console.log('📵 Connection lost');
+            updateConnectionStatus();
+        });
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🐚 Pearl Memorial - Enhanced Offline Page Loaded');
+            updateTechnicalInfo();
+            updateConnectionStatus();
+        });
+        
+        // Service Worker更新確認
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                console.log('✅ Service Worker ready');
+                
+                registration.addEventListener('updatefound', () => {
+                    console.log('🔄 Service Worker update found');
+                    const newWorker = registration.installing;
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed') {
+                            console.log('✅ New Service Worker installed');
+                            
+                            // 更新通知
+                            const updateNotice = document.createElement('div');
+                            updateNotice.style.position = 'fixed';
+                            updateNotice.style.bottom = '20px';
+                            updateNotice.style.left = '20px';
+                            updateNotice.style.background = 'rgba(39, 174, 96, 0.9)';
+                            updateNotice.style.color = 'white';
+                            updateNotice.style.padding = '15px 20px';
+                            updateNotice.style.borderRadius = '10px';
+                            updateNotice.style.zIndex = '10000';
+                            updateNotice.style.cursor = 'pointer';
+                            updateNotice.innerHTML = '🚀 更新が利用可能です（タップして適用）';
+                            
+                            updateNotice.addEventListener('click', () => {
+                                newWorker.postMessage({type: 'SKIP_WAITING'});
+                                window.location.reload();
+                            });
+                            
+                            document.body.appendChild(updateNotice);
+                        }
+                    });
+                });
+            });
+        }
+        
+        // エラーハンドリング
+        window.addEventListener('error', function(e) {
+            console.log('⚠️ Page error in offline mode:', e.message);
+        });
+        
+        console.log('🚨 Enhanced Pearl Memorial Offline Mode - v3.0');
     </script>
 </body>
 </html>
