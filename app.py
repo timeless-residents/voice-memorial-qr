@@ -112,7 +112,7 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
                 pass
 
 def create_pearl_memorial_qr(data_uri, metadata):
-    """Pearl Memorial QRコード生成"""
+    """Pearl Memorial QRコード生成（iPhone標準カメラ対応）"""
     # Pearl Memorial専用データ構造
     pearl_data = {
         "pearl_memorial": "v1.0",
@@ -132,9 +132,29 @@ def create_pearl_memorial_qr(data_uri, metadata):
     # JSON最適化
     qr_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
     
+    # iPhone標準カメラ対応：URLアクセス形式も生成
+    import urllib.parse
+    base64_data = base64.b64encode(qr_content.encode('utf-8')).decode('utf-8')
+    url_data = urllib.parse.quote(base64_data)
+    
+    # サーバーのベースURL（本番環境では実際のドメインを使用）
+    base_url = "https://voice-memorial-qr.onrender.com"
+    play_url = f"{base_url}/play?data={url_data}"
+    
     # デバッグログ
     print(f"QR Content Preview: {qr_content[:100]}...")
     print(f"QR Content Length: {len(qr_content)} characters")
+    print(f"Play URL Length: {len(play_url)} characters")
+    
+    # QRコードの内容を選択（URLが短い場合はURLを使用）
+    if len(play_url) < len(qr_content) and len(play_url) < QR_MAX_SIZE:
+        final_qr_content = play_url
+        qr_type = "URL (iPhone Camera Compatible)"
+        print(f"Using URL format for iPhone compatibility: {len(play_url)} chars")
+    else:
+        final_qr_content = qr_content
+        qr_type = "JSON Data"
+        print(f"Using JSON format: {len(qr_content)} chars")
     
     # QRコード生成
     qr = qrcode.QRCode(
@@ -145,10 +165,10 @@ def create_pearl_memorial_qr(data_uri, metadata):
     )
     
     try:
-        qr.add_data(qr_content)
+        qr.add_data(final_qr_content)
         qr.make(fit=True)
         
-        print(f"QR Code Version: {qr.version}")
+        print(f"QR Code Version: {qr.version} ({qr_type})")
         
         if qr.version > 40:
             raise PearlMemorialError(f'QRコードが大きすぎます（バージョン{qr.version}）')
@@ -160,7 +180,8 @@ def create_pearl_memorial_qr(data_uri, metadata):
         final_img = add_qr_metadata(qr_img, {
             **metadata,
             'qr_version': f"Version {qr.version}",
-            'content_length': f"{len(qr_content)} chars"
+            'content_length': f"{len(final_qr_content)} chars",
+            'qr_type': qr_type
         })
         
         return final_img
@@ -216,11 +237,12 @@ def add_qr_metadata(qr_img, metadata):
         f"📊 Raw: {metadata.get('raw_size', 'Unknown')}",
         f"📏 Content: {metadata.get('content_length', 'Unknown')}",
         f"📱 QR: {metadata.get('qr_version', 'Unknown')}",
-        f"⚡ Tech: DataURI Embedded",
+        f"⚡ Tech: {metadata.get('qr_type', 'DataURI')}",
         f"🔍 Format: Pearl Memorial v1.0",
         f"🎵 Audio: Base64 Opus Codec",
+        f"📱 iPhone: Standard Camera Compatible",
         f"🔑 Reader: Pearl Memorial Reader App",
-        f"▶️ Action: Scan with Reader App",
+        f"▶️ Action: Scan with Any QR Reader",
         f"🌍 World's First Standalone Voice QR"
     ]
     
@@ -235,6 +257,39 @@ def add_qr_metadata(qr_img, metadata):
 def index():
     """メインページ - QR生成"""
     return render_template('index.html')
+
+@app.route('/play')
+def play_audio():
+    """iPhone標準カメラ対応：URL直接アクセスで音声再生"""
+    data_param = request.args.get('data')
+    
+    if not data_param:
+        return render_template('reader.html')
+    
+    try:
+        # Base64デコードしてJSONデータを取得
+        import urllib.parse
+        decoded_data = urllib.parse.unquote(data_param)
+        
+        # Base64エンコードされている場合はデコード
+        try:
+            json_data = base64.b64decode(decoded_data).decode('utf-8')
+        except:
+            # Base64でない場合はそのまま使用
+            json_data = decoded_data
+        
+        # JSONデータの検証
+        pearl_data = json.loads(json_data)
+        
+        if not pearl_data.get('pearl_memorial') or pearl_data.get('type') != 'standalone_audio':
+            raise ValueError('Invalid Pearl Memorial format')
+        
+        # 再生ページをプリロードされたデータで表示
+        return render_template('play.html', pearl_data=json.dumps(pearl_data))
+        
+    except Exception as e:
+        # エラー時は通常のReaderページにリダイレクト
+        return render_template('reader.html', error=f'QRデータの読み込みに失敗しました: {str(e)}')
 
 @app.route('/reader')
 def reader():
