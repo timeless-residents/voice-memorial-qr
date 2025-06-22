@@ -302,7 +302,31 @@
             color: #333;
         }
         
-        .footer-links {
+        .debug-log {
+            background: rgba(0,0,0,0.8);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            max-height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            border: 1px solid #333;
+        }
+        
+        .debug-toggle {
+            background: rgba(0,0,0,0.3);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            cursor: pointer;
+            margin: 10px 0;
+        }
             margin-top: 30px;
             display: flex;
             gap: 15px;
@@ -394,6 +418,12 @@
         <!-- メタデータ情報 -->
         <div class="metadata-info" id="metadataInfo"></div>
         
+        <!-- デバッグ表示 -->
+        <button class="debug-toggle" id="debugToggle" onclick="window.pearlPlayer?.toggleDebug()">
+            📱 iPhone デバッグログ表示
+        </button>
+        <div class="debug-log" id="debugLog" style="display: none;"></div>
+        
         <!-- コントロール -->
         <div class="controls">
             <button class="control-btn" id="replayButton" style="display: none;">
@@ -423,15 +453,59 @@
                 this.mode = 'manual';
                 this.audioData = null;
                 this.metadata = null;
+                this.debugVisible = false;
+                this.debugLogs = [];
                 
                 this.initializeElements();
                 this.parseURL();
                 this.setupEventListeners();
                 
-                console.log('[Pearl Memorial] Pure JavaScript player initialized');
+                this.log('🚀 Pure JavaScript player initialized');
             }
             
-            // DOM要素初期化
+            // ログ表示システム
+            log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${message}`;
+                
+                // コンソールログ
+                console.log('[Pearl Memorial]', message);
+                
+                // 画面上のデバッグログ
+                this.debugLogs.push(logEntry);
+                if (this.debugLogs.length > 20) {
+                    this.debugLogs.shift(); // 最大20行まで
+                }
+                
+                // デバッグログ更新
+                this.updateDebugLog();
+            }
+            
+            // デバッグログ更新
+            updateDebugLog() {
+                const debugLogEl = document.getElementById('debugLog');
+                if (debugLogEl) {
+                    debugLogEl.textContent = this.debugLogs.join('\n');
+                    debugLogEl.scrollTop = debugLogEl.scrollHeight;
+                }
+            }
+            
+            // デバッグ表示切り替え
+            toggleDebug() {
+                this.debugVisible = !this.debugVisible;
+                const debugLogEl = document.getElementById('debugLog');
+                const debugToggleEl = document.getElementById('debugToggle');
+                
+                if (debugLogEl) {
+                    debugLogEl.style.display = this.debugVisible ? 'block' : 'none';
+                }
+                if (debugToggleEl) {
+                    debugToggleEl.textContent = this.debugVisible ? 
+                        '❌ デバッグログ非表示' : '📱 iPhone デバッグログ表示';
+                }
+                
+                this.log(`Debug display ${this.debugVisible ? 'enabled' : 'disabled'}`);
+            }
             initializeElements() {
                 this.elements = {
                     modeIndicator: document.getElementById('modeIndicator'),
@@ -458,14 +532,15 @@
                     const audioParam = urlParams.get('audio');
                     const dataParam = urlParams.get('data');
                     
-                    console.log('[Pearl Memorial] URL params:', { audio: audioParam?.substring(0, 50) + '...', data: dataParam?.substring(0, 50) + '...' });
+                    this.log(`URL params: audio=${audioParam ? audioParam.substring(0, 50) + '...' : 'null'}, data=${dataParam ? dataParam.substring(0, 50) + '...' : 'null'}`);
                     
                     if (audioParam) {
                         // 📱 iPhone直接再生モード
                         this.mode = 'direct';
                         try {
                             this.audioData = decodeURIComponent(audioParam);
-                            console.log('[Pearl Memorial] Decoded audio data:', this.audioData.substring(0, 100) + '...');
+                            this.log(`Decoded audio data length: ${this.audioData.length}`);
+                            this.log(`Audio data starts with: ${this.audioData.substring(0, 50)}`);
                             
                             if (!this.audioData.startsWith('data:audio/')) {
                                 throw new Error('Invalid audio data format');
@@ -473,7 +548,7 @@
                             
                             this.showDirectMode();
                         } catch (error) {
-                            console.error('[Pearl Memorial] Audio decoding failed:', error);
+                            this.log(`❌ Audio decoding failed: ${error.message}`);
                             this.mode = 'manual';
                             this.showManualMode();
                             this.updateStatus('❌ 音声データのデコードに失敗しました', 'error');
@@ -488,10 +563,10 @@
                         this.showManualMode();
                     }
                     
-                    console.log('[Pearl Memorial] Final mode:', this.mode);
+                    this.log(`Final mode: ${this.mode}`);
                     
                 } catch (error) {
-                    console.error('[Pearl Memorial] URL parsing failed:', error);
+                    this.log(`❌ URL parsing failed: ${error.message}`);
                     this.mode = 'manual';
                     this.showManualMode();
                     this.updateStatus('❌ URLの解析に失敗しました', 'error');
@@ -500,7 +575,7 @@
             
             // 直接再生モード表示
             showDirectMode() {
-                console.log('[Pearl Memorial] Showing direct mode');
+                this.log('📱 Showing direct mode');
                 
                 this.elements.modeIndicator.textContent = '📱 iPhone直接再生モード';
                 this.elements.modeIndicator.className = 'mode-indicator mode-direct';
@@ -518,7 +593,7 @@
                 // 音声準備を開始（非同期）
                 setTimeout(() => {
                     this.prepareAudio().catch(error => {
-                        console.error('[Pearl Memorial] Prepare audio failed in showDirectMode:', error);
+                        this.log(`❌ Prepare audio failed in showDirectMode: ${error.message}`);
                     });
                 }, 100);
             }
@@ -650,33 +725,33 @@
             // AudioContext初期化
             async initAudioContext() {
                 try {
-                    console.log('[Pearl Memorial] Initializing AudioContext...');
+                    this.log('🔧 Initializing AudioContext...');
                     
                     if (!this.audioContext) {
                         try {
                             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                            console.log('[Pearl Memorial] AudioContext created:', this.audioContext.state);
+                            this.log(`AudioContext created: ${this.audioContext.state}`);
                         } catch (error) {
-                            console.error('[Pearl Memorial] AudioContext creation failed:', error);
+                            this.log(`❌ AudioContext creation failed: ${error.message}`);
                             throw new Error('AudioContext作成に失敗しました: ' + error.message);
                         }
                     }
                     
                     if (this.audioContext.state === 'suspended') {
-                        console.log('[Pearl Memorial] AudioContext is suspended, attempting to resume...');
+                        this.log('AudioContext is suspended, attempting to resume...');
                         try {
                             await this.audioContext.resume();
-                            console.log('[Pearl Memorial] AudioContext resumed:', this.audioContext.state);
+                            this.log(`AudioContext resumed: ${this.audioContext.state}`);
                         } catch (error) {
-                            console.error('[Pearl Memorial] AudioContext resume failed:', error);
+                            this.log(`❌ AudioContext resume failed: ${error.message}`);
                             throw new Error('AudioContext再開に失敗しました: ' + error.message);
                         }
                     }
                     
-                    console.log('[Pearl Memorial] AudioContext ready, state:', this.audioContext.state);
+                    this.log(`✅ AudioContext ready, state: ${this.audioContext.state}`);
                     
                 } catch (error) {
-                    console.error('[Pearl Memorial] AudioContext initialization failed:', error);
+                    this.log(`❌ AudioContext initialization failed: ${error.message}`);
                     throw error;
                 }
             }
@@ -685,23 +760,23 @@
             async prepareAudio() {
                 try {
                     this.updateStatus('🔄 音声データを準備中...');
-                    console.log('[Pearl Memorial] Preparing audio, mode:', this.mode);
-                    console.log('[Pearl Memorial] Audio data length:', this.audioData?.length);
+                    this.log(`🔄 Preparing audio, mode: ${this.mode}`);
+                    this.log(`Audio data length: ${this.audioData?.length}`);
                     
                     if (!this.audioData) {
                         throw new Error('音声データがありません');
                     }
                     
                     if (!this.audioData.startsWith('data:audio/')) {
-                        console.error('[Pearl Memorial] Invalid audio data format:', this.audioData.substring(0, 100));
+                        this.log(`❌ Invalid audio data format: ${this.audioData.substring(0, 100)}`);
                         throw new Error('無効な音声データ形式です');
                     }
                     
-                    console.log('[Pearl Memorial] Audio data is valid, initializing AudioContext...');
+                    this.log('✅ Audio data is valid, initializing AudioContext...');
                     await this.initAudioContext();
                     
                     this.updateStatus('🔊 音声をデコード中...');
-                    console.log('[Pearl Memorial] Decoding audio data...');
+                    this.log('🔊 Decoding audio data...');
                     
                     // Base64デコード
                     const commaIndex = this.audioData.indexOf(',');
@@ -714,7 +789,7 @@
                         throw new Error('Base64データが空です');
                     }
                     
-                    console.log('[Pearl Memorial] Base64 data length:', base64Data.length);
+                    this.log(`Base64 data length: ${base64Data.length}`);
                     
                     let binaryString;
                     try {
@@ -730,14 +805,14 @@
                         uint8Array[i] = binaryString.charCodeAt(i);
                     }
                     
-                    console.log('[Pearl Memorial] Binary conversion complete, buffer size:', arrayBuffer.byteLength);
+                    this.log(`Binary conversion complete, buffer size: ${arrayBuffer.byteLength}`);
                     
                     // 音声バッファ作成
                     try {
                         this.audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-                        console.log(`[Pearl Memorial] Audio decoded successfully: ${this.audioBuffer.duration}s`);
+                        this.log(`✅ Audio decoded successfully: ${this.audioBuffer.duration}s`);
                     } catch (error) {
-                        console.error('[Pearl Memorial] Audio decoding failed:', error);
+                        this.log(`❌ Audio decoding failed: ${error.message}`);
                         throw new Error('音声デコードに失敗しました: ' + error.message);
                     }
                     
@@ -746,17 +821,17 @@
                     
                     this.updateStatus('✅ 再生準備完了', 'success');
                     this.elements.playButton.disabled = false;
-                    console.log('[Pearl Memorial] Audio preparation completed successfully');
+                    this.log('🎉 Audio preparation completed successfully');
                     
                 } catch (error) {
-                    console.error('[Pearl Memorial] Audio preparation failed:', error);
+                    this.log(`❌ Audio preparation failed: ${error.message}`);
                     this.updateStatus('❌ エラー: ' + error.message, 'error');
                     this.elements.playButton.textContent = '❌ 再生できません';
                     this.elements.playButton.disabled = true;
                     
                     // デバッグ情報を表示
                     if (this.audioData) {
-                        console.log('[Pearl Memorial] Debug - Audio data preview:', this.audioData.substring(0, 200));
+                        this.log(`Debug - Audio data preview: ${this.audioData.substring(0, 200)}`);
                     }
                 }
             }
