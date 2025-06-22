@@ -885,9 +885,15 @@ def get_reader_html():
         <div class="manual-section">
             <h3>📝 手動入力（代替方法）</h3>
             <textarea class="qr-input" id="qrInput" 
-                      placeholder="QRコードデータを手動で貼り付け..."></textarea>
+                      placeholder="QRコードデータを手動で貼り付け...&#10;&#10;例: {&quot;pearl_memorial&quot;:&quot;v1.0&quot;,&quot;type&quot;:&quot;standalone_audio&quot;...}"></textarea>
             <button class="btn secondary" onclick="playAudioFromInput()">
                 ▶️ 手動入力から再生
+            </button>
+            <button class="btn secondary" onclick="validateInput()" style="background: #17a2b8;">
+                🔍 入力データを検証
+            </button>
+            <button class="btn secondary" onclick="clearInput()" style="background: #6c757d;">
+                🗑️ クリア
             </button>
         </div>
         
@@ -1144,8 +1150,106 @@ def get_reader_html():
             await playAudioFromData(qrInput);
         }
 
-        // ページロード時の初期化
-        document.addEventListener('DOMContentLoaded', () => {
+        // 入力データ検証関数
+        function validateInput() {
+            const qrInput = document.getElementById('qrInput').value.trim();
+            const statusElement = document.getElementById('status');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            if (!qrInput) {
+                statusElement.textContent = '❌ 検証するデータを入力してください';
+                statusElement.className = 'status error';
+                return;
+            }
+
+            try {
+                statusElement.textContent = '🔍 データを検証中...';
+                statusElement.className = 'status';
+
+                // JSON解析
+                const pearlData = JSON.parse(qrInput);
+                
+                let validationResult = '✅ JSON解析成功<br>';
+                
+                // Pearl Memorial形式確認
+                if (pearlData.pearl_memorial === 'v1.0') {
+                    validationResult += '✅ Pearl Memorial v1.0 形式<br>';
+                } else {
+                    validationResult += '❌ pearl_memorial フィールドが無効: ' + pearlData.pearl_memorial + '<br>';
+                }
+                
+                if (pearlData.type === 'standalone_audio') {
+                    validationResult += '✅ standalone_audio タイプ<br>';
+                } else {
+                    validationResult += '❌ type フィールドが無効: ' + pearlData.type + '<br>';
+                }
+                
+                // 音声データ確認
+                if (pearlData.audio_data && pearlData.audio_data.startsWith('data:audio/')) {
+                    validationResult += '✅ 音声データURI形式正常<br>';
+                    validationResult += '📏 音声データ長: ' + pearlData.audio_data.length + ' 文字<br>';
+                    
+                    // Base64部分の検証
+                    const base64Data = pearlData.audio_data.split(',')[1];
+                    if (base64Data && base64Data.length > 0) {
+                        validationResult += '✅ Base64データ存在<br>';
+                        validationResult += '📏 Base64長: ' + base64Data.length + ' 文字<br>';
+                    } else {
+                        validationResult += '❌ Base64データが無効<br>';
+                    }
+                } else {
+                    validationResult += '❌ 音声データURIが無効<br>';
+                }
+                
+                // メタデータ確認
+                if (pearlData.metadata) {
+                    validationResult += '✅ メタデータ存在<br>';
+                    validationResult += '📝 タイトル: ' + (pearlData.metadata.title || 'なし') + '<br>';
+                    validationResult += '📝 ファイル名: ' + (pearlData.metadata.filename || 'なし') + '<br>';
+                } else {
+                    validationResult += '❌ メタデータが見つかりません<br>';
+                }
+                
+                validationResult += '<br>📊 総データ長: ' + qrInput.length + ' 文字';
+                
+                debugInfo.innerHTML = validationResult;
+                debugInfo.classList.remove('hidden');
+                
+                statusElement.textContent = '✅ データ検証完了';
+                statusElement.className = 'status success';
+                
+            } catch (error) {
+                console.error('Validation error:', error);
+                
+                const errorInfo = '❌ JSON解析エラー<br>' +
+                    'エラー: ' + error.message + '<br>' +
+                    'データ長: ' + qrInput.length + ' 文字<br>' +
+                    'データプレビュー: ' + qrInput.substring(0, 100) + '...';
+                
+                debugInfo.innerHTML = errorInfo;
+                debugInfo.classList.remove('hidden');
+                
+                statusElement.textContent = '❌ 検証エラー: ' + error.message;
+                statusElement.className = 'status error';
+            }
+        }
+
+        // クリア関数の改善
+        function clearInput() {
+            document.getElementById('qrInput').value = '';
+            const statusElement = document.getElementById('status');
+            const debugInfo = document.getElementById('debugInfo');
+            
+            statusElement.textContent = '📱 カメラでQRコードをスキャンしてください';
+            statusElement.className = 'status';
+            debugInfo.classList.add('hidden');
+            
+            // 再生中の音声を停止
+            if (currentSource) {
+                currentSource.stop();
+                currentSource = null;
+            }
+        }
             console.log('Pearl Memorial Reader loaded');
             
             // ユーザーの最初のクリックでAudioContextを準備
