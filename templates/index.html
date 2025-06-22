@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2c3e50">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register("/static/service-worker.js").then(() => {
+      console.log("✅ Service Worker registered.");
+    });
+  }
+</script>
     <title>Pearl Memorial QR - ハイブリッド音声保存技術</title>
     <style>
         * { 
