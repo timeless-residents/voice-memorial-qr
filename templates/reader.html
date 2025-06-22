@@ -6,7 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Pearl Memorial">
-    <title>Pearl Memorial Reader - 完全オフライン音声再生</title>
+    <title>Pearl Memorial Reader - ハイブリッド音声再生</title>
     <style>
         * { 
             margin: 0; 
@@ -52,6 +52,16 @@
             color: rgba(255,255,255,0.8);
             font-size: 0.9em;
             margin: 10px 0;
+        }
+        
+        .hybrid-notice {
+            background: rgba(255,255,255,0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid #3498db;
+            color: #333;
         }
         
         .status {
@@ -170,6 +180,17 @@
             display: none;
         }
         
+        .format-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            font-size: 0.9em;
+            display: none;
+        }
+        
         .instructions {
             background: rgba(255,255,255,0.1);
             color: white;
@@ -231,7 +252,7 @@
     <div class="container">
         <div class="header">
             <h1>🐚 Pearl Memorial Reader</h1>
-            <p>完全オフライン音声再生</p>
+            <p>ハイブリッド音声再生システム</p>
             <div class="device-info" id="deviceInfo">
                 <script>
                     // デバイス情報を即座に表示
@@ -254,30 +275,37 @@
             </div>
         </div>
         
+        <div class="hybrid-notice">
+            <h4>🚀 ハイブリッド対応Reader</h4>
+            <p><strong>📱 iPhone標準カメラ用URL</strong>: 自動でplay.htmlへリダイレクト</p>
+            <p><strong>🔧 Pearl Memorial Reader用JSON</strong>: フル機能で詳細解析・再生</p>
+            <p><strong>🧠 自動判定</strong>: データ形式を自動識別して最適な処理を実行</p>
+        </div>
+        
         <div class="status" id="status">QRコードデータを貼り付けて音声を再生してください</div>
         
         <div class="instructions">
-            <h4>📝 使用方法</h4>
+            <h4>📝 ハイブリッド使用方法</h4>
             <ol>
-                <li>Pearl Memorial QRコードをスマホカメラでスキャン</li>
-                <li>表示されたデータを下のテキストエリアに貼り付け</li>
+                <li><strong>iPhone標準カメラ</strong>: QRスキャン → 自動再生（推奨）</li>
+                <li><strong>他のQRアプリ</strong>: データをコピーして下に貼り付け</li>
                 <li>「▶️ 音声を再生」ボタンをタップ</li>
                 <li>音声が再生されます</li>
             </ol>
         </div>
         
         <div class="input-section">
-            <h3>🎵 音声再生</h3>
+            <h3>🎵 ハイブリッド音声再生</h3>
             
             <textarea class="qr-input" id="qrInput" 
-                      placeholder="QRコードから読み取ったデータをここに貼り付けてください...&#10;&#10;例: {&quot;pearl_memorial&quot;:&quot;v1.0&quot;,&quot;type&quot;:&quot;standalone_audio&quot;...}"></textarea>
+                      placeholder="QRコードから読み取ったデータをここに貼り付けてください...&#10;&#10;📱 iPhone URL形式: https://voice-memorial-qr.onrender.com/play?audio=...&#10;🔧 Reader JSON形式: {&quot;pearl_memorial&quot;:&quot;v1.0&quot;,&quot;type&quot;:&quot;standalone_audio&quot;...}"></textarea>
             
             <button class="btn" id="playBtn">
-                ▶️ 音声を再生
+                ▶️ ハイブリッド音声再生
             </button>
             
             <button class="btn validate" id="validateBtn">
-                🔍 データを検証
+                🔍 データ形式を検証
             </button>
             
             <button class="btn clear" id="clearBtn">
@@ -285,6 +313,7 @@
             </button>
         </div>
         
+        <div class="format-info" id="formatInfo"></div>
         <div class="debug-info" id="debugInfo"></div>
         
         <div style="text-align: center; margin-top: 30px;">
@@ -306,10 +335,11 @@
         const validateBtnEl = document.getElementById('validateBtn');
         const clearBtnEl = document.getElementById('clearBtn');
         const debugInfoEl = document.getElementById('debugInfo');
+        const formatInfoEl = document.getElementById('formatInfo');
         
         // ログ関数
         function log(message) {
-            console.log('[Pearl Memorial]', message);
+            console.log('[Pearl Memorial Reader]', message);
         }
         
         // ステータス更新関数
@@ -327,6 +357,56 @@
         
         function hideDebug() {
             debugInfoEl.style.display = 'none';
+        }
+        
+        // フォーマット情報表示
+        function showFormatInfo(message) {
+            formatInfoEl.innerHTML = message;
+            formatInfoEl.style.display = 'block';
+        }
+        
+        function hideFormatInfo() {
+            formatInfoEl.style.display = 'none';
+        }
+        
+        // 🧠 QRデータ形式判定
+        function detectQRFormat(qrData) {
+            const trimmedData = qrData.trim();
+            
+            // 📱 iPhone標準カメラ用URL形式判定
+            if (trimmedData.startsWith('https://voice-memorial-qr.onrender.com/play?audio=')) {
+                return {
+                    type: 'url',
+                    mode: 'iPhone直接再生',
+                    description: '📱 iPhone標準カメラ用URL形式',
+                    audioParam: trimmedData.split('audio=')[1]
+                };
+            }
+            
+            // 🔧 JSON形式判定
+            try {
+                const jsonData = JSON.parse(trimmedData);
+                if (jsonData.pearl_memorial && jsonData.type === 'standalone_audio') {
+                    return {
+                        type: 'json',
+                        mode: 'Reader フル機能',
+                        description: '🔧 Pearl Memorial Reader用JSON形式',
+                        data: jsonData
+                    };
+                } else {
+                    return {
+                        type: 'invalid_json',
+                        mode: 'エラー',
+                        description: '❌ 無効なJSON（Pearl Memorial形式ではありません）'
+                    };
+                }
+            } catch (error) {
+                return {
+                    type: 'invalid',
+                    mode: 'エラー',
+                    description: '❌ 無効なデータ形式（URLでもJSONでもありません）'
+                };
+            }
         }
         
         // AudioContext初期化
@@ -352,7 +432,7 @@
             }
         }
         
-        // 音声再生関数
+        // 🎯 ハイブリッド音声再生関数
         async function playAudio() {
             const qrData = qrInputEl.value.trim();
             
@@ -368,32 +448,66 @@
                     currentSource = null;
                 }
                 
-                updateStatus('🔄 データを解析中...');
+                updateStatus('🔄 データ形式を判定中...');
                 
-                // JSON解析
-                let pearlData;
-                try {
-                    pearlData = JSON.parse(qrData);
-                    log('JSON parsed successfully');
-                } catch (error) {
-                    throw new Error('無効なJSONデータです: ' + error.message);
-                }
+                // 🧠 データ形式判定
+                const format = detectQRFormat(qrData);
+                log(`Detected format: ${format.type} (${format.mode})`);
                 
-                // Pearl Memorial形式確認
-                if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
-                    throw new Error('Pearl Memorial QRコードではありません');
+                let audioDataUri;
+                let title;
+                
+                if (format.type === 'url') {
+                    // 📱 iPhone標準カメラ用URL形式
+                    updateStatus('📱 iPhone URL形式を検出 - 音声データを抽出中...');
+                    
+                    try {
+                        audioDataUri = decodeURIComponent(format.audioParam);
+                        title = 'Pearl Memorial - URL経由';
+                        
+                        if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
+                            throw new Error('URL内の音声データが無効です');
+                        }
+                        
+                        showFormatInfo(`
+                            <strong>📱 iPhone URL形式で処理</strong><br>
+                            モード: ${format.mode}<br>
+                            音声データ長: ${audioDataUri.length} 文字<br>
+                            処理方法: Reader内で直接再生
+                        `);
+                        
+                    } catch (error) {
+                        throw new Error('URL形式の音声データ抽出に失敗: ' + error.message);
+                    }
+                    
+                } else if (format.type === 'json') {
+                    // 🔧 Pearl Memorial Reader用JSON形式
+                    updateStatus('🔧 JSON形式を検出 - メタデータ付きで処理中...');
+                    
+                    const pearlData = format.data;
+                    audioDataUri = pearlData.audio_data;
+                    title = pearlData.metadata?.title || 'Pearl Memorial';
+                    
+                    if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
+                        throw new Error('JSON内の音声データが見つかりません');
+                    }
+                    
+                    showFormatInfo(`
+                        <strong>🔧 JSON形式で処理</strong><br>
+                        モード: ${format.mode}<br>
+                        タイトル: ${title}<br>
+                        作成日時: ${pearlData.metadata?.created ? new Date(pearlData.metadata.created).toLocaleString('ja-JP') : '不明'}<br>
+                        音声データ長: ${audioDataUri.length} 文字
+                    `);
+                    
+                } else {
+                    throw new Error(format.description);
                 }
                 
                 updateStatus('🎵 音声データを準備中...');
                 
                 // AudioContext初期化
                 await initAudioContext();
-                
-                // 音声データ取得
-                const audioDataUri = pearlData.audio_data;
-                if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
-                    throw new Error('音声データが見つかりません');
-                }
                 
                 updateStatus('🔊 音声をデコード中...');
                 
@@ -428,15 +542,17 @@
                 currentSource.buffer = audioBuffer;
                 currentSource.connect(audioContext.destination);
                 
-                const title = pearlData.metadata?.title || 'Pearl Memorial';
                 updateStatus('🎵 再生中: ' + title, 'playing');
                 
                 // デバッグ情報表示
                 showDebug(`
-                    Duration: ${audioBuffer.duration.toFixed(2)}s<br>
-                    Sample Rate: ${audioBuffer.sampleRate}Hz<br>
-                    Channels: ${audioBuffer.numberOfChannels}<br>
-                    Data Size: ${arrayBuffer.byteLength} bytes
+                    <strong>🎵 再生情報:</strong><br>
+                    形式: ${format.description}<br>
+                    長さ: ${audioBuffer.duration.toFixed(2)}秒<br>
+                    サンプリングレート: ${audioBuffer.sampleRate}Hz<br>
+                    チャンネル: ${audioBuffer.numberOfChannels}<br>
+                    データサイズ: ${arrayBuffer.byteLength} bytes<br>
+                    処理モード: ${format.mode}
                 `);
                 
                 currentSource.onended = () => {
@@ -453,6 +569,7 @@
                 log('Playback error: ' + error.message);
                 updateStatus('❌ エラー: ' + error.message, 'error');
                 showDebug('Error: ' + error.message);
+                hideFormatInfo();
             }
         }
         
@@ -466,38 +583,58 @@
             }
             
             try {
-                updateStatus('🔍 データを検証中...');
+                updateStatus('🔍 データ形式を検証中...');
                 
-                // JSON解析
-                const pearlData = JSON.parse(qrData);
+                // 🧠 データ形式判定
+                const format = detectQRFormat(qrData);
                 
-                let result = '✅ JSON解析成功<br>';
+                let result = `<strong>🔍 検証結果:</strong><br>`;
+                result += `形式: ${format.description}<br>`;
+                result += `モード: ${format.mode}<br><br>`;
                 
-                // 各フィールドの検証
-                if (pearlData.pearl_memorial === 'v1.0') {
-                    result += '✅ Pearl Memorial v1.0 形式<br>';
+                if (format.type === 'url') {
+                    // URL形式の詳細検証
+                    result += `<strong>📱 URL形式詳細:</strong><br>`;
+                    result += `✅ ベースURL確認済み<br>`;
+                    result += `✅ audioパラメータ存在<br>`;
+                    
+                    try {
+                        const audioData = decodeURIComponent(format.audioParam);
+                        if (audioData.startsWith('data:audio/')) {
+                            result += `✅ 音声DataURI形式正常<br>`;
+                            result += `📏 音声データ長: ${audioData.length} 文字<br>`;
+                        } else {
+                            result += `❌ 音声DataURI形式が無効<br>`;
+                        }
+                    } catch (error) {
+                        result += `❌ URLデコードエラー: ${error.message}<br>`;
+                    }
+                    
+                } else if (format.type === 'json') {
+                    // JSON形式の詳細検証
+                    const pearlData = format.data;
+                    result += `<strong>🔧 JSON形式詳細:</strong><br>`;
+                    result += `✅ Pearl Memorial v1.0 形式<br>`;
+                    result += `✅ standalone_audio タイプ<br>`;
+                    
+                    if (pearlData.audio_data && pearlData.audio_data.startsWith('data:audio/')) {
+                        result += `✅ 音声データURI正常<br>`;
+                        result += `📏 音声データ長: ${pearlData.audio_data.length} 文字<br>`;
+                    } else {
+                        result += `❌ 音声データURIが無効<br>`;
+                    }
+                    
+                    if (pearlData.metadata) {
+                        result += `✅ メタデータ存在<br>`;
+                        result += `📝 タイトル: ${pearlData.metadata.title || 'なし'}<br>`;
+                        result += `🆔 ID: ${pearlData.metadata.id || 'なし'}<br>`;
+                    } else {
+                        result += `❌ メタデータが見つかりません<br>`;
+                    }
+                    
                 } else {
-                    result += '❌ pearl_memorial フィールドが無効<br>';
-                }
-                
-                if (pearlData.type === 'standalone_audio') {
-                    result += '✅ standalone_audio タイプ<br>';
-                } else {
-                    result += '❌ type フィールドが無効<br>';
-                }
-                
-                if (pearlData.audio_data && pearlData.audio_data.startsWith('data:audio/')) {
-                    result += '✅ 音声データURI正常<br>';
-                    result += `📏 音声データ長: ${pearlData.audio_data.length} 文字<br>`;
-                } else {
-                    result += '❌ 音声データURIが無効<br>';
-                }
-                
-                if (pearlData.metadata) {
-                    result += '✅ メタデータ存在<br>';
-                    result += `📝 タイトル: ${pearlData.metadata.title || 'なし'}<br>`;
-                } else {
-                    result += '❌ メタデータが見つかりません<br>';
+                    result += `❌ 認識できないデータ形式<br>`;
+                    result += `💡 対応形式: iPhone Camera URL または Pearl Memorial JSON<br>`;
                 }
                 
                 result += `<br>📊 総データ長: ${qrData.length} 文字`;
@@ -505,15 +642,22 @@
                 showDebug(result);
                 updateStatus('✅ データ検証完了', 'success');
                 
+                // フォーマット情報も表示
+                showFormatInfo(`
+                    <strong>検証済み形式:</strong> ${format.description}<br>
+                    <strong>処理モード:</strong> ${format.mode}
+                `);
+                
             } catch (error) {
                 log('Validation error: ' + error.message);
                 updateStatus('❌ 検証エラー: ' + error.message, 'error');
                 showDebug(`
-                    ❌ JSON解析エラー<br>
+                    ❌ 検証エラー<br>
                     エラー: ${error.message}<br>
                     データ長: ${qrData.length} 文字<br>
                     データプレビュー: ${qrData.substring(0, 100)}...
                 `);
+                hideFormatInfo();
             }
         }
         
@@ -522,6 +666,7 @@
             qrInputEl.value = '';
             updateStatus('QRコードデータを貼り付けて音声を再生してください');
             hideDebug();
+            hideFormatInfo();
             
             // 再生中の音声を停止
             if (currentSource) {
@@ -581,7 +726,7 @@
         
         // 初期化
         function init() {
-            log('Pearl Memorial Reader initialized');
+            log('Pearl Memorial Hybrid Reader initialized');
             setupEventListeners();
             
             // iOS Safari対応
