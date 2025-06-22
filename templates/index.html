@@ -65,6 +65,39 @@
             color: #333;
         }
         
+        .workflow-notice {
+            background: rgba(255,255,255,0.95);
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            border-left: 5px solid #3498db;
+            color: #333;
+        }
+        
+        .workflow-step {
+            display: flex;
+            align-items: center;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(52, 152, 219, 0.1);
+            border-radius: 8px;
+        }
+        
+        .workflow-number {
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+        
         .upload-section {
             background: white;
             border-radius: 20px;
@@ -293,6 +326,39 @@
             border: 1px solid #bee5eb;
         }
         
+        .navigation-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .nav-link {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-align: center;
+            min-width: 180px;
+        }
+        
+        .nav-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+        
+        .nav-link.primary {
+            background: rgba(231, 76, 60, 0.8);
+        }
+        
+        .nav-link.primary:hover {
+            background: rgba(231, 76, 60, 1);
+        }
+        
         .features {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -330,23 +396,6 @@
             opacity: 0.8;
         }
         
-        .reader-link {
-            display: inline-block;
-            background: rgba(255,255,255,0.2);
-            color: white;
-            text-decoration: none;
-            padding: 15px 30px;
-            border-radius: 25px;
-            margin-top: 30px;
-            transition: all 0.3s ease;
-            font-weight: 600;
-        }
-        
-        .reader-link:hover {
-            background: rgba(255,255,255,0.3);
-            transform: translateY(-2px);
-        }
-        
         /* モバイル対応 */
         @media (max-width: 768px) {
             .container {
@@ -370,6 +419,15 @@
                 grid-template-columns: 1fr;
                 gap: 20px;
             }
+            
+            .navigation-links {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .nav-link {
+                min-width: auto;
+            }
         }
     </style>
 </head>
@@ -381,6 +439,28 @@
             <div class="tech-highlight">
                 <strong>🚀 iPhone Camera + Reader Compatible</strong><br>
                 生成 → 永続保存 → ユニバーサル再生
+            </div>
+        </div>
+        
+        <div class="workflow-notice">
+            <h3>📱 使用方法（3ステップ）</h3>
+            <div class="workflow-step">
+                <div class="workflow-number">1</div>
+                <div>
+                    <strong>QR生成（ここ）</strong>: 音声を録音またはアップロード → QRコード生成・ダウンロード
+                </div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-number">2</div>
+                <div>
+                    <strong>QRスキャン</strong>: iPhone標準カメラまたは他のQRリーダーでスキャン
+                </div>
+            </div>
+            <div class="workflow-step">
+                <div class="workflow-number">3</div>
+                <div>
+                    <strong>音声再生</strong>: 自動でplay.htmlに移動 → メタデータ付き音声再生
+                </div>
             </div>
         </div>
         
@@ -446,9 +526,12 @@
             </form>
         </div>
         
-        <div style="text-align: center;">
-            <a href="/reader" class="reader-link">
-                📱 Pearl Memorial Reader を開く
+        <div class="navigation-links">
+            <a href="/reader" class="nav-link primary">
+                📱 Pearl Memorial Reader
+            </a>
+            <a href="/play" class="nav-link">
+                🎵 音声再生ページ
             </a>
         </div>
         
@@ -520,7 +603,7 @@
             // 推定音声データサイズ（2秒、Opus圧縮）
             const estimatedDataSize = Math.min(fileSize * 0.1, 8000); // 最大8KB
             const base64Size = estimatedDataSize * 1.33; // Base64エンコード
-            const dataURISize = base64Size + 50; // DataURI헤더
+            const dataURISize = base64Size + 50; // DataURIヘッダー
             
             // URL形式サイズ推定
             const baseURL = "https://voice-memorial-qr.onrender.com/play?audio=";
@@ -787,7 +870,7 @@
 
         // 初期化
         document.addEventListener('DOMContentLoaded', () => {
-            showStatus('🚀 Pearl Memorial Hybrid Generator 準備完了！iPhone Camera + Reader 両対応QRコードを生成できます。', 'processing');
+            showStatus('🚀 Pearl Memorial QR Generator 準備完了！音声録音またはファイルアップロードでハイブリッドQRコードを生成できます。', 'processing');
             
             setTimeout(() => {
                 if (status.classList.contains('processing')) {
