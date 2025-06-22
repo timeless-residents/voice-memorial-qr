@@ -782,10 +782,20 @@ def get_reader_html():
             margin: 10px 0;
             cursor: pointer;
             transition: all 0.3s ease;
+            /* iOS Safari修正 */
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .btn:hover {
             background: #45a049;
             transform: translateY(-2px);
+        }
+        .btn:active {
+            transform: translateY(0);
+            background: #3d8b40;
         }
         .btn:disabled {
             background: #ccc;
@@ -798,11 +808,17 @@ def get_reader_html():
         .btn.secondary:hover {
             background: #5a6268;
         }
+        .btn.secondary:active {
+            background: #545b62;
+        }
         .btn.danger {
             background: #dc3545;
         }
         .btn.danger:hover {
             background: #c82333;
+        }
+        .btn.danger:active {
+            background: #bd2130;
         }
         
         /* マニュアル入力セクション */
@@ -859,6 +875,9 @@ def get_reader_html():
         <div class="header">
             <h1>🐚 Pearl Memorial Reader</h1>
             <p>QRスキャン → 自動音声再生</p>
+            <div class="camera-status" id="deviceInfo" style="font-size: 0.8em; margin-top: 10px;">
+                デバイス情報を取得中...
+            </div>
         </div>
         
         <div class="status" id="status">📱 カメラでQRコードをスキャンしてください</div>
@@ -872,11 +891,11 @@ def get_reader_html():
             
             <div class="camera-status" id="cameraStatus">カメラ準備中...</div>
             
-            <button class="btn" id="startScanBtn" onclick="startQRScan()">
+            <button class="btn" id="startScanBtn" type="button">
                 📷 QRスキャン開始
             </button>
             
-            <button class="btn danger hidden" id="stopScanBtn" onclick="stopQRScan()">
+            <button class="btn danger hidden" id="stopScanBtn" type="button">
                 ⏹️ スキャン停止
             </button>
         </div>
@@ -886,13 +905,13 @@ def get_reader_html():
             <h3>📝 手動入力（代替方法）</h3>
             <textarea class="qr-input" id="qrInput" 
                       placeholder="QRコードデータを手動で貼り付け...&#10;&#10;例: {&quot;pearl_memorial&quot;:&quot;v1.0&quot;,&quot;type&quot;:&quot;standalone_audio&quot;...}"></textarea>
-            <button class="btn secondary" onclick="playAudioFromInput()">
+            <button class="btn secondary" id="playFromInputBtn" type="button">
                 ▶️ 手動入力から再生
             </button>
-            <button class="btn secondary" onclick="validateInput()" style="background: #17a2b8;">
+            <button class="btn secondary" id="validateInputBtn" type="button" style="background: #17a2b8;">
                 🔍 入力データを検証
             </button>
-            <button class="btn secondary" onclick="clearInput()" style="background: #6c757d;">
+            <button class="btn secondary" id="clearInputBtn" type="button" style="background: #6c757d;">
                 🗑️ クリア
             </button>
         </div>
@@ -1042,12 +1061,29 @@ def get_reader_html():
 
         async function initAudioContext() {
             if (!audioContext) {
+                // iOS Safari対応：webkitAudioContextも試行
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 console.log('AudioContext created:', audioContext.state);
+                
+                // iOS Safari対応：プロパティ設定
+                if (audioContext.state === 'suspended') {
+                    console.log('AudioContext suspended, attempting to resume...');
+                }
             }
+            
+            // iOS Safari対応：必ずresumeを試行
             if (audioContext.state === 'suspended') {
-                await audioContext.resume();
-                console.log('AudioContext resumed:', audioContext.state);
+                try {
+                    await audioContext.resume();
+                    console.log('AudioContext resumed:', audioContext.state);
+                } catch (error) {
+                    console.error('AudioContext resume failed:', error);
+                }
+            }
+            
+            // iOS Safari対応：AudioContextの状態を継続監視
+            if (audioContext.state !== 'running') {
+                console.warn('AudioContext not running:', audioContext.state);
             }
         }
 
