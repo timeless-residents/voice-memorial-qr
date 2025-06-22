@@ -119,7 +119,7 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
                 pass
 
 def create_pearl_memorial_qr(data_uri, metadata):
-    """Pearl Memorial QRコード生成"""
+    """Pearl Memorial QRコード生成（デバッグ強化版）"""
     # Pearl Memorial専用データ構造
     pearl_data = {
         "pearl_memorial": "v1.0",
@@ -136,8 +136,17 @@ def create_pearl_memorial_qr(data_uri, metadata):
         }
     }
     
-    # JSON最適化
+    # JSON最適化（デバッグ情報付き）
     qr_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
+    
+    # デバッグ: QRコンテンツの先頭100文字をログ出力
+    print(f"QR Content Preview: {qr_content[:100]}...")
+    print(f"QR Content Length: {len(qr_content)} characters")
+    print(f"Audio Data Length: {len(data_uri)} characters")
+    
+    # QRコードサイズチェック
+    if len(qr_content) > 70000:
+        raise PearlMemorialError(f'QRコンテンツが大きすぎます: {len(qr_content)}文字。70,000文字以下にしてください。')
     
     # QRコード生成
     qr = qrcode.QRCode(
@@ -147,28 +156,37 @@ def create_pearl_memorial_qr(data_uri, metadata):
         border=1,
     )
     
-    qr.add_data(qr_content)
-    qr.make(fit=True)
-    
-    if qr.version > 40:
-        raise PearlMemorialError(f'QRコードが大きすぎます（バージョン{qr.version}）')
-    
-    # QR画像生成
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-    
-    # メタデータ付きQR画像生成
-    final_img = add_qr_metadata(qr_img, {
-        **metadata,
-        'qr_version': f"Version {qr.version}",
-        'content_length': f"{len(qr_content)} chars"
-    })
-    
-    return final_img
+    try:
+        qr.add_data(qr_content)
+        qr.make(fit=True)
+        
+        print(f"QR Code Version: {qr.version}")
+        
+        if qr.version > 40:
+            raise PearlMemorialError(f'QRコードが大きすぎます（バージョン{qr.version}）。音声を短くしてください。')
+        
+        # QR画像生成
+        qr_img = qr.make_image(fill_color="black", back_color="white")
+        
+        # メタデータ付きQR画像生成
+        final_img = add_qr_metadata(qr_img, {
+            **metadata,
+            'qr_version': f"Version {qr.version}",
+            'content_length': f"{len(qr_content)} chars",
+            'json_preview': qr_content[:50] + "..." if len(qr_content) > 50 else qr_content
+        })
+        
+        return final_img
+        
+    except Exception as e:
+        print(f"QR Code Generation Error: {str(e)}")
+        print(f"Data sample: {qr_content[:200]}...")
+        raise PearlMemorialError(f'QRコード生成エラー: {str(e)}')
 
 def add_qr_metadata(qr_img, metadata):
-    """QRコードにメタデータを追加"""
+    """QRコードにメタデータを追加（デバッグ強化版）"""
     qr_width, qr_height = qr_img.size
-    header_height, footer_height, padding = 140, 200, 15
+    header_height, footer_height, padding = 160, 240, 15
     
     total_width = qr_width + (padding * 2)
     total_height = header_height + qr_height + footer_height + (padding * 3)
@@ -197,24 +215,31 @@ def add_qr_metadata(qr_img, metadata):
     draw.text((padding, y), "Works in Airplane Mode", fill='#f39c12', font=font)
     y += 20
     draw.text((padding, y), "1000-Year Guaranteed Playback", fill='#e67e22', font=font)
+    y += 20
+    
+    # デバッグ情報（重要！）
+    draw.text((padding, y), f"JSON Preview: {metadata.get('json_preview', 'N/A')}", fill='#8e44ad', font=font)
     
     # 区切り線
-    line_y = 135
+    line_y = 155
     draw.line([(padding, line_y), (total_width - padding, line_y)], fill='#3498db', width=2)
     
     # フッター
     footer_y = header_height + qr_height + padding * 2
     footer_items = [
-        f"File: {metadata.get('filename', 'Unknown')}",
-        f"Process: {metadata.get('process_type', 'Audio processing')}",
-        f"ID: {metadata.get('id', 'Unknown')}",
-        f"Raw: {metadata.get('raw_size', 'Unknown')}",
-        f"Content: {metadata.get('content_length', 'Unknown')}",
-        f"QR: {metadata.get('qr_version', 'Unknown')}",
-        f"Tech: {metadata.get('technology', 'DataURI')}",
-        f"Reader: Pearl Memorial Reader App Required",
-        f"Action: Scan with Pearl Memorial Reader",
-        f"Pearl Memorial - World's First Standalone Voice QR"
+        f"📁 File: {metadata.get('filename', 'Unknown')}",
+        f"🔄 Process: {metadata.get('process_type', 'Audio processing')}",
+        f"🆔 ID: {metadata.get('id', 'Unknown')}",
+        f"📊 Raw: {metadata.get('raw_size', 'Unknown')}",
+        f"📏 Content: {metadata.get('content_length', 'Unknown')}",
+        f"📱 QR: {metadata.get('qr_version', 'Unknown')}",
+        f"⚡ Tech: {metadata.get('technology', 'DataURI')}",
+        f"🔍 Format: JSON with embedded audio data",
+        f"🎵 Audio: Base64 Opus codec embedded",
+        f"📋 Content Type: Pearl Memorial v1.0",
+        f"🔑 Reader: Pearl Memorial Reader App Required",
+        f"▶️ Action: Scan with Pearl Memorial Reader",
+        f"🌍 Pearl Memorial - World's First Standalone Voice QR"
     ]
     
     for i, item in enumerate(footer_items):
@@ -635,7 +660,7 @@ def get_index_html():
     return html_content
 
 def get_reader_html():
-    """Reader HTMLテンプレートを安全に返す"""
+    """Reader HTMLテンプレートを安全に返す（再生修正版）"""
     html_content = """<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -670,6 +695,26 @@ def get_reader_html():
             border-radius: 15px;
             text-align: center;
             margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .status.success {
+            background: rgba(212, 237, 218, 0.95);
+            color: #155724;
+        }
+        .status.error {
+            background: rgba(248, 215, 218, 0.95);
+            color: #721c24;
+        }
+        .status.playing {
+            background: rgba(209, 236, 241, 0.95);
+            color: #0c5460;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
         }
         .qr-input {
             width: 100%;
@@ -677,9 +722,11 @@ def get_reader_html():
             padding: 15px;
             border: 2px solid #ddd;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 12px;
+            font-family: monospace;
             margin: 15px 0;
             resize: vertical;
+            box-sizing: border-box;
         }
         .btn {
             background: #4CAF50;
@@ -691,6 +738,31 @@ def get_reader_html():
             width: 100%;
             margin: 10px 0;
             cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn.clear {
+            background: #95a5a6;
+        }
+        .btn.clear:hover {
+            background: #7f8c8d;
+        }
+        .debug-info {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            margin: 15px 0;
+            font-family: monospace;
         }
     </style>
 </head>
@@ -706,44 +778,97 @@ def get_reader_html():
         <textarea class="qr-input" id="qrInput" 
                   placeholder="Pearl Memorial QRコードのデータをここに貼り付け..."></textarea>
         
-        <button class="btn" onclick="playAudioFromQR()">▶️ 音声を再生</button>
-        <button class="btn" onclick="clearInput()" style="background: #95a5a6;">🗑️ クリア</button>
+        <button class="btn" id="playButton" onclick="playAudioFromQR()">▶️ 音声を再生</button>
+        <button class="btn clear" onclick="clearInput()">🗑️ クリア</button>
+        
+        <div class="debug-info" id="debugInfo" style="display: none;"></div>
     </div>
 
     <script>
         let audioContext;
+        let currentSource;
+        let isPlaying = false;
 
         async function initAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                console.log('AudioContext created:', audioContext.state);
             }
             if (audioContext.state === 'suspended') {
                 await audioContext.resume();
+                console.log('AudioContext resumed:', audioContext.state);
             }
         }
 
         async function playAudioFromQR() {
             const qrInput = document.getElementById('qrInput').value.trim();
             const statusElement = document.getElementById('status');
+            const playButton = document.getElementById('playButton');
+            const debugInfo = document.getElementById('debugInfo');
             
             if (!qrInput) {
-                statusElement.textContent = 'QRデータを入力してください';
+                statusElement.textContent = '❌ QRデータを入力してください';
+                statusElement.className = 'status error';
                 return;
             }
 
             try {
-                await initAudioContext();
-                statusElement.textContent = '音声データを解析中...';
+                // 既存の再生を停止
+                if (currentSource) {
+                    currentSource.stop();
+                    currentSource = null;
+                }
 
-                const pearlData = JSON.parse(qrInput);
-                
+                playButton.disabled = true;
+                statusElement.textContent = '🔄 QRデータを解析中...';
+                statusElement.className = 'status';
+
+                // JSON解析
+                let pearlData;
+                try {
+                    pearlData = JSON.parse(qrInput);
+                    console.log('Parsed Pearl Data:', pearlData);
+                } catch (e) {
+                    throw new Error('無効なJSONデータです: ' + e.message);
+                }
+
+                // Pearl Memorial形式確認
                 if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
                     throw new Error('Pearl Memorial QRコードではありません');
                 }
 
+                statusElement.textContent = '🎵 音声データを準備中...';
+
+                // DataURI解析
                 const audioDataUri = pearlData.audio_data;
+                if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
+                    throw new Error('音声データが見つかりません');
+                }
+
+                console.log('Audio Data URI length:', audioDataUri.length);
+                console.log('Audio Data URI preview:', audioDataUri.substring(0, 100));
+
+                // AudioContextの初期化
+                await initAudioContext();
+
+                statusElement.textContent = '🔊 音声をデコード中...';
+
+                // Base64デコード
                 const base64Data = audioDataUri.split(',')[1];
-                const binaryString = atob(base64Data);
+                if (!base64Data) {
+                    throw new Error('Base64データが無効です');
+                }
+
+                console.log('Base64 data length:', base64Data.length);
+
+                // バイナリデータに変換
+                let binaryString;
+                try {
+                    binaryString = atob(base64Data);
+                } catch (e) {
+                    throw new Error('Base64デコードエラー: ' + e.message);
+                }
+
                 const arrayBuffer = new ArrayBuffer(binaryString.length);
                 const uint8Array = new Uint8Array(arrayBuffer);
 
@@ -751,29 +876,103 @@ def get_reader_html():
                     uint8Array[i] = binaryString.charCodeAt(i);
                 }
 
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                const source = audioContext.createBufferSource();
-                source.buffer = audioBuffer;
-                source.connect(audioContext.destination);
+                console.log('Binary data length:', arrayBuffer.byteLength);
+
+                // Web Audio APIでデコード
+                let audioBuffer;
+                try {
+                    audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    console.log('Audio buffer decoded successfully:', {
+                        duration: audioBuffer.duration,
+                        sampleRate: audioBuffer.sampleRate,
+                        numberOfChannels: audioBuffer.numberOfChannels
+                    });
+                } catch (e) {
+                    console.error('Audio decode error:', e);
+                    throw new Error('音声デコードエラー: ' + e.message + '. 音声形式が対応していない可能性があります。');
+                }
+
+                // 音声再生
+                currentSource = audioContext.createBufferSource();
+                currentSource.buffer = audioBuffer;
+                currentSource.connect(audioContext.destination);
 
                 const title = pearlData.metadata?.title || 'Pearl Memorial';
-                statusElement.textContent = '再生中: ' + title;
+                statusElement.textContent = '🎵 再生中: ' + title;
+                statusElement.className = 'status playing';
+                isPlaying = true;
 
-                source.onended = () => {
-                    statusElement.textContent = '再生完了';
+                // デバッグ情報表示
+                debugInfo.innerHTML = 
+                    'Duration: ' + audioBuffer.duration.toFixed(2) + 's | ' +
+                    'Sample Rate: ' + audioBuffer.sampleRate + 'Hz | ' +
+                    'Channels: ' + audioBuffer.numberOfChannels;
+                debugInfo.style.display = 'block';
+
+                currentSource.onended = () => {
+                    statusElement.textContent = '✅ 再生完了 - ' + title;
+                    statusElement.className = 'status success';
+                    playButton.disabled = false;
+                    isPlaying = false;
+                    currentSource = null;
+                    console.log('Playback ended');
                 };
 
-                source.start(0);
+                // 再生開始
+                currentSource.start(0);
+                console.log('Playback started');
 
             } catch (error) {
-                statusElement.textContent = 'エラー: ' + error.message;
+                console.error('再生エラー:', error);
+                statusElement.textContent = '❌ エラー: ' + error.message;
+                statusElement.className = 'status error';
+                playButton.disabled = false;
+                isPlaying = false;
+                
+                // エラー詳細をデバッグ情報に表示
+                debugInfo.innerHTML = 'Error: ' + error.message;
+                debugInfo.style.display = 'block';
             }
         }
 
         function clearInput() {
             document.getElementById('qrInput').value = '';
-            document.getElementById('status').textContent = 'QRコードデータを貼り付けてください';
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = 'QRコードデータを貼り付けてください';
+            statusElement.className = 'status';
+            document.getElementById('debugInfo').style.display = 'none';
+            
+            // 再生中の音声を停止
+            if (currentSource) {
+                currentSource.stop();
+                currentSource = null;
+                isPlaying = false;
+            }
+            
+            document.getElementById('playButton').disabled = false;
         }
+
+        // ページロード時にオーディオコンテキストの状態をチェック
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Pearl Memorial Reader loaded');
+            
+            // ユーザーの最初のインタラクションでAudioContextを準備
+            document.addEventListener('click', async () => {
+                if (!audioContext) {
+                    await initAudioContext();
+                }
+            }, { once: true });
+        });
+
+        // オンライン/オフライン状態の表示
+        function updateConnectionStatus() {
+            const status = navigator.onLine ? '🌐 オンライン' : '🔒 オフライン';
+            console.log('Connection status:', status);
+        }
+
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        updateConnectionStatus();
     </script>
 </body>
 </html>"""
@@ -861,8 +1060,103 @@ def reader():
     """Pearl Memorial Reader App"""
     return get_reader_html()
 
-@app.route('/health')
-def health_check():
+@app.route('/test-qr')
+def test_qr():
+    """QRコードテストページ"""
+    test_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Pearl Memorial QR Test</title>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/qr-scanner/1.4.2/qr-scanner.umd.min.js"></script>
+    </head>
+    <body style="font-family: Arial; padding: 20px;">
+        <h1>Pearl Memorial QR Code Tester</h1>
+        
+        <h2>1. Generate Test QR</h2>
+        <button onclick="generateTestQR()">Generate Test QR Code</button>
+        <div id="testQRResult"></div>
+        
+        <h2>2. QR Content Validator</h2>
+        <textarea id="qrContent" rows="10" cols="80" placeholder="Paste QR content here..."></textarea><br>
+        <button onclick="validateQRContent()">Validate JSON Content</button>
+        <div id="validationResult"></div>
+        
+        <script>
+        function generateTestQR() {
+            const testData = {
+                "pearl_memorial": "v1.0",
+                "type": "standalone_audio",
+                "audio_data": "data:audio/ogg;codecs=opus;base64,T2dnUwACAAAAAAAAAAA=",
+                "metadata": {
+                    "title": "Test Audio",
+                    "filename": "test.wav",
+                    "created": new Date().toISOString(),
+                    "duration": 2.0,
+                    "id": "test123",
+                    "technology": "Server-Independent DataURI",
+                    "creator": "Pearl Memorial System"
+                }
+            };
+            
+            const jsonStr = JSON.stringify(testData);
+            document.getElementById('testQRResult').innerHTML = 
+                '<h3>Test QR Content:</h3>' +
+                '<pre style="background: #f0f0f0; padding: 10px;">' + 
+                JSON.stringify(testData, null, 2) + 
+                '</pre>' +
+                '<p><strong>Length:</strong> ' + jsonStr.length + ' characters</p>';
+        }
+        
+        function validateQRContent() {
+            const content = document.getElementById('qrContent').value;
+            const resultDiv = document.getElementById('validationResult');
+            
+            try {
+                const data = JSON.parse(content);
+                
+                let validation = '<h3>Validation Results:</h3>';
+                validation += '<p style="color: green;">✅ Valid JSON</p>';
+                
+                if (data.pearl_memorial === 'v1.0') {
+                    validation += '<p style="color: green;">✅ Pearl Memorial v1.0 format</p>';
+                } else {
+                    validation += '<p style="color: red;">❌ Missing pearl_memorial field</p>';
+                }
+                
+                if (data.type === 'standalone_audio') {
+                    validation += '<p style="color: green;">✅ Standalone audio type</p>';
+                } else {
+                    validation += '<p style="color: red;">❌ Invalid type field</p>';
+                }
+                
+                if (data.audio_data && data.audio_data.startsWith('data:audio/')) {
+                    validation += '<p style="color: green;">✅ Valid audio data URI</p>';
+                    validation += '<p>Audio data length: ' + data.audio_data.length + ' chars</p>';
+                } else {
+                    validation += '<p style="color: red;">❌ Invalid audio data URI</p>';
+                }
+                
+                if (data.metadata) {
+                    validation += '<p style="color: green;">✅ Metadata present</p>';
+                    validation += '<p>Title: ' + (data.metadata.title || 'N/A') + '</p>';
+                } else {
+                    validation += '<p style="color: red;">❌ Missing metadata</p>';
+                }
+                
+                validation += '<p><strong>Total content length:</strong> ' + content.length + ' characters</p>';
+                
+                resultDiv.innerHTML = validation;
+                
+            } catch (e) {
+                resultDiv.innerHTML = '<h3>Validation Results:</h3><p style="color: red;">❌ Invalid JSON: ' + e.message + '</p>';
+            }
+        }
+        </script>
+    </body>
+    </html>
+    """
+    return test_html
     """ヘルスチェックAPI"""
     ffmpeg_available = check_ffmpeg()
     
