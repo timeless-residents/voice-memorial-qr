@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pearl Memorial">
+    <title>Pearl Memorial - 音声再生</title>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+            -webkit-text-size-adjust: 100%;
+        }
+        
+        .player-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            max-width: 400px;
+            width: 100%;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .pearl-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { 
+                filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)); 
+                transform: scale(1);
+            }
+            to { 
+                filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.8)); 
+                transform: scale(1.05);
+            }
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .title-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 15px;
+            margin: 20px 0;
+            color: #2c3e50;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        
+        .play-button {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 1.3em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 25px rgba(231, 76, 60, 0.4);
+            margin: 20px 0;
+            width: 100%;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+        
+        .play-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(231, 76, 60, 0.6);
+        }
+        
+        .play-button:active {
+            transform: scale(0.98);
+        }
+        
+        .play-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            color: #7f8c8d;
+            font-size: 1em;
+            margin: 15px 0;
+            min-height: 24px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            color: #27ae60;
+        }
+        
+        .status.error {
+            color: #e74c3c;
+        }
+        
+        .status.playing {
+            color: #3498db;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #ecf0f1;
+            border-radius: 2px;
+            margin: 15px 0;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .control-btn {
+            background: rgba(52, 152, 219, 0.1);
+            color: #3498db;
+            border: 2px solid #3498db;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            touch-action: manipulation;
+        }
+        
+        .control-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .audio-info {
+            background: rgba(52, 152, 219, 0.1);
+            padding: 12px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-size: 0.85em;
+            color: #2c3e50;
+            display: none;
+        }
+        
+        .device-notice {
+            background: rgba(46, 204, 113, 0.1);
+            color: #27ae60;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            margin: 20px 0;
+            border: 1px solid rgba(46, 204, 113, 0.3);
+        }
+        
+        .error-notice {
+            background: rgba(231, 76, 60, 0.1);
+            color: #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border: 1px solid rgba(231, 76, 60, 0.3);
+        }
+        
+        .footer-links {
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+        
+        .footer-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 8px 16px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .footer-link:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        
+        /* モバイル対応 */
+        @media (max-width: 480px) {
+            .player-container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .play-button {
+                font-size: 1.2em;
+                padding: 18px 30px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .footer-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="player-container">
+        <div class="pearl-icon">🐚</div>
+        <h1>Pearl Memorial</h1>
+        <div class="subtitle">完全オフライン音声再生</div>
+        
+        {% if pearl_data %}
+            <!-- 音声データが正常にロードされた場合 -->
+            <div class="device-notice">
+                📱 iPhone標準カメラから正常にアクセスされました
+            </div>
+            
+            <div class="title-display" id="audioTitle">
+                音声を読み込み中...
+            </div>
+            
+            <button class="play-button" id="playButton">
+                ▶️ 音声を再生
+            </button>
+            
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="status" id="status">再生準備中...</div>
+            
+            <div class="audio-info" id="audioInfo"></div>
+            
+            <div class="controls">
+                <button class="control-btn" id="replayButton" style="display: none;">
+                    🔄 再生
+                </button>
+                <button class="control-btn" id="stopButton" style="display: none;">
+                    ⏹️ 停止
+                </button>
+            </div>
+            
+        {% else %}
+            <!-- エラーまたはデータなしの場合 -->
+            <div class="error-notice">
+                {% if error %}
+                    ❌ {{ error }}
+                {% else %}
+                    ❌ 音声データが見つかりませんでした
+                {% endif %}
+            </div>
+            
+            <div class="controls">
+                <button class="control-btn" onclick="window.location.href='/reader'">
+                    📱 Reader アプリを開く
+                </button>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if pearl_data %}
+    <div class="footer-links">
+        <a href="/" class="footer-link">🎤 QR生成</a>
+        <a href="/reader" class="footer-link">📱 Reader</a>
+    </div>
+    {% endif %}
+
+    <script>
+        {% if pearl_data %}
+        // Pearl Memorial データ
+        const pearlData = {{ pearl_data | safe }};
+        let audioContext = null;
+        let currentSource = null;
+        let audioBuffer = null;
+        let isPlaying = false;
+        let startTime = 0;
+        let pauseTime = 0;
+        
+        // DOM要素
+        const playButton = document.getElementById('playButton');
+        const replayButton = document.getElementById('replayButton');
+        const stopButton = document.getElementById('stopButton');
+        const status = document.getElementById('status');
+        const audioTitle = document.getElementById('audioTitle');
+        const audioInfo = document.getElementById('audioInfo');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        
+        // ログ関数
+        function log(message) {
+            console.log('[Pearl Memorial Play]', message);
+        }
+        
+        // ステータス更新
+        function updateStatus(message, type = '') {
+            status.textContent = message;
+            status.className = type ? `status ${type}` : 'status';
+            log(`Status: ${message}`);
+        }
+        
+        // オーディオ情報表示
+        function showAudioInfo(buffer) {
+            audioInfo.innerHTML = `
+                ⏱️ 長さ: ${buffer.duration.toFixed(1)}秒<br>
+                🔊 サンプリングレート: ${buffer.sampleRate}Hz<br>
+                🎵 チャンネル: ${buffer.numberOfChannels}
+            `;
+            audioInfo.style.display = 'block';
+        }
+        
+        // プログレスバー更新
+        function updateProgress() {
+            if (!isPlaying || !audioBuffer) return;
+            
+            const currentTime = audioContext.currentTime - startTime;
+            const progress = Math.min(currentTime / audioBuffer.duration * 100, 100);
+            progressFill.style.width = progress + '%';
+            
+            if (progress < 100 && isPlaying) {
+                requestAnimationFrame(updateProgress);
+            }
+        }
+        
+        // AudioContext初期化
+        async function initAudioContext() {
+            if (!audioContext) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    log('AudioContext created: ' + audioContext.state);
+                } catch (error) {
+                    throw new Error('AudioContext作成に失敗しました: ' + error.message);
+                }
+            }
+            
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+                log('AudioContext resumed: ' + audioContext.state);
+            }
+        }
+        
+        // 音声データ準備
+        async function prepareAudio() {
+            try {
+                updateStatus('🔄 音声データを準備中...');
+                
+                // Pearl Memorial形式確認
+                if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
+                    throw new Error('無効なPearl Memorial形式です');
+                }
+                
+                // タイトル表示
+                const title = pearlData.metadata?.title || 'Pearl Memorial';
+                audioTitle.textContent = title;
+                
+                // AudioContext初期化
+                await initAudioContext();
+                
+                // 音声データ取得
+                const audioDataUri = pearlData.audio_data;
+                if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
+                    throw new Error('音声データが見つかりません');
+                }
+                
+                updateStatus('🔊 音声をデコード中...');
+                
+                // Base64デコード
+                const base64Data = audioDataUri.split(',')[1];
+                const binaryString = atob(base64Data);
+                const arrayBuffer = new ArrayBuffer(binaryString.length);
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                for (let i = 0; i < binaryString.length; i++) {
+                    uint8Array[i] = binaryString.charCodeAt(i);
+                }
+                
+                // 音声バッファ作成
+                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                log(`Audio decoded: ${audioBuffer.duration}s`);
+                
+                // 音声情報表示
+                showAudioInfo(audioBuffer);
+                
+                updateStatus('✅ 再生準備完了', 'success');
+                playButton.disabled = false;
+                
+            } catch (error) {
+                log('Audio preparation failed: ' + error.message);
+                updateStatus('❌ エラー: ' + error.message, 'error');
+                playButton.textContent = '❌ 再生できません';
+                playButton.disabled = true;
+            }
+        }
+        
+        // 音声再生
+        async function playAudio() {
+            if (!audioBuffer || isPlaying) return;
+            
+            try {
+                // 既存の音源を停止
+                if (currentSource) {
+                    currentSource.stop();
+                }
+                
+                // 新しい音源作成
+                currentSource = audioContext.createBufferSource();
+                currentSource.buffer = audioBuffer;
+                currentSource.connect(audioContext.destination);
+                
+                // 再生開始
+                startTime = audioContext.currentTime - pauseTime;
+                currentSource.start(0, pauseTime);
+                isPlaying = true;
+                
+                // UI更新
+                playButton.style.display = 'none';
+                replayButton.style.display = 'inline-block';
+                stopButton.style.display = 'inline-block';
+                progressBar.style.display = 'block';
+                
+                const title = pearlData.metadata?.title || 'Pearl Memorial';
+                updateStatus(`🎵 再生中: ${title}`, 'playing');
+                
+                // プログレス更新開始
+                updateProgress();
+                
+                // 再生終了時の処理
+                currentSource.onended = () => {
+                    if (isPlaying) {
+                        onPlaybackEnd();
+                    }
+                };
+                
+                log('Playback started');
+                
+            } catch (error) {
+                log('Playback failed: ' + error.message);
+                updateStatus('❌ 再生エラー: ' + error.message, 'error');
+            }
+        }
+        
+        // 再生停止
+        function stopAudio() {
+            if (currentSource && isPlaying) {
+                currentSource.stop();
+                onPlaybackEnd();
+            }
+        }
+        
+        // 再生終了処理
+        function onPlaybackEnd() {
+            isPlaying = false;
+            pauseTime = 0;
+            currentSource = null;
+            
+            // UI復元
+            playButton.style.display = 'inline-block';
+            replayButton.style.display = 'none';
+            stopButton.style.display = 'none';
+            progressBar.style.display = 'none';
+            progressFill.style.width = '0%';
+            
+            const title = pearlData.metadata?.title || 'Pearl Memorial';
+            updateStatus(`✅ 再生完了: ${title}`, 'success');
+            
+            log('Playback ended');
+        }
+        
+        // イベントリスナー設定
+        playButton.addEventListener('click', playAudio);
+        replayButton.addEventListener('click', playAudio);
+        stopButton.addEventListener('click', stopAudio);
+        
+        // タッチイベント対応
+        [playButton, replayButton, stopButton].forEach(btn => {
+            btn.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                this.click();
+            });
+        });
+        
+        // ユーザーインタラクション後にAudioContext初期化
+        document.addEventListener('click', async function() {
+            if (!audioContext) {
+                try {
+                    await initAudioContext();
+                } catch (error) {
+                    log('AudioContext init failed: ' + error.message);
+                }
+            }
+        }, { once: true });
+        
+        // 初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Pearl Memorial Play page loaded');
+            prepareAudio();
+        });
+        
+        {% else %}
+        // エラー時の処理
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Pearl Memorial Play page loaded with error');
+        });
+        {% endif %}
+    </script>
+</body>
+</html>
