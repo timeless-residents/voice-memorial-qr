@@ -416,41 +416,67 @@
     {% endif %}
 
     <script>
-        // 🎯 サーバーからのデータ注入（Jinja2で事前処理）
-        const appData = {
-            mode: '{{ mode or "error" }}',
-            directAudio: {{ direct_audio | tojson if direct_audio else 'null' }},
-            pearlData: {{ pearl_data | tojson if pearl_data else 'null' }},
-            title: {{ title | tojson if title else '"Pearl Memorial"' }}
-        };
+        // 🎯 サーバーからのデータ注入（安全な処理）
+        let appData = { mode: 'error' };
         
-        console.log('[Pearl Memorial] Mode:', appData.mode);
-        console.log('[Pearl Memorial] Data loaded:', appData);
+        try {
+            // サーバーからのデータを安全に取得
+            {% if direct_audio %}
+            appData = {
+                mode: 'direct',
+                directAudio: {{ direct_audio | tojson }},
+                title: 'Pearl Memorial - 直接再生'
+            };
+            {% elif pearl_data %}
+            appData = {
+                mode: 'metadata', 
+                pearlData: JSON.parse({{ pearl_data | tojson }}),
+                title: 'Pearl Memorial'
+            };
+            {% else %}
+            appData = { mode: 'error' };
+            {% endif %}
+            
+            console.log('[Pearl Memorial] Mode:', appData.mode);
+            console.log('[Pearl Memorial] Data loaded:', appData);
+            
+        } catch (error) {
+            console.error('[Pearl Memorial] Data initialization error:', error);
+            appData = { mode: 'error' };
+        }
         
-        // モード判定
+        // エラー時は処理停止
         if (appData.mode === 'error') {
-            console.log('[Pearl Memorial] ❌ エラーモード');
-            return; // エラー時は処理終了
+            console.log('[Pearl Memorial] ❌ エラーモード - 処理停止');
+        } else {
+            console.log('[Pearl Memorial] ✅ 初期化成功 - 処理開始');
         }
         
         // 音声処理用変数
         let audioContext = null;
-        let currentSource = null;
-        let audioBuffer = null;
-        let isPlaying = false;
-        let startTime = 0;
-        let pauseTime = 0;
+        // DOM要素の取得と初期化チェック
+        function initializeElements() {
+            const elements = {
+                playButton: document.getElementById('playButton'),
+                replayButton: document.getElementById('replayButton'),
+                stopButton: document.getElementById('stopButton'),
+                status: document.getElementById('status'),
+                audioTitle: document.getElementById('audioTitle'),
+                audioInfo: document.getElementById('audioInfo'),
+                progressBar: document.getElementById('progressBar'),
+                progressFill: document.getElementById('progressFill'),
+                metadataInfo: document.getElementById('metadataInfo')
+            };
+            
+            // 必須要素のチェック
+            if (!elements.playButton || !elements.status || !elements.audioTitle) {
+                throw new Error('必須DOM要素が見つかりません');
+            }
+            
+            return elements;
+        }
         
-        // DOM要素
-        const playButton = document.getElementById('playButton');
-        const replayButton = document.getElementById('replayButton');
-        const stopButton = document.getElementById('stopButton');
-        const status = document.getElementById('status');
-        const audioTitle = document.getElementById('audioTitle');
-        const audioInfo = document.getElementById('audioInfo');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill = document.getElementById('progressFill');
-        const metadataInfo = document.getElementById('metadataInfo');
+        let elements = null;
         
         // ログ関数
         function log(message) {
@@ -459,27 +485,33 @@
         
         // ステータス更新
         function updateStatus(message, type = '') {
-            status.textContent = message;
-            status.className = type ? `status ${type}` : 'status';
+            if (!elements || !elements.status) {
+                console.warn('Status element not available');
+                return;
+            }
+            elements.status.textContent = message;
+            elements.status.className = type ? `status ${type}` : 'status';
             log(`Status: ${message}`);
         }
         
         // オーディオ情報表示
         function showAudioInfo(buffer) {
-            audioInfo.innerHTML = `
+            if (!elements || !elements.audioInfo) return;
+            
+            elements.audioInfo.innerHTML = `
                 ⏱️ 長さ: ${buffer.duration.toFixed(1)}秒<br>
                 🔊 サンプリングレート: ${buffer.sampleRate}Hz<br>
                 🎵 チャンネル: ${buffer.numberOfChannels}
             `;
-            audioInfo.style.display = 'block';
+            elements.audioInfo.style.display = 'block';
         }
         
         // メタデータ情報表示（Reader モードのみ）
         function showMetadataInfo(data) {
-            if (appData.mode !== 'metadata' || !metadataInfo) return;
+            if (appData.mode !== 'metadata' || !elements || !elements.metadataInfo) return;
             
             const metadata = data.metadata || {};
-            metadataInfo.innerHTML = `
+            elements.metadataInfo.innerHTML = `
                 <strong>📄 詳細メタデータ:</strong><br>
                 🆔 ID: ${metadata.id || 'Unknown'}<br>
                 📁 ファイル名: ${metadata.filename || 'Unknown'}<br>
@@ -487,16 +519,18 @@
                 ⚡ 技術: ${metadata.technology || 'Unknown'}<br>
                 🏗️ 作成者: ${metadata.creator || 'Unknown'}
             `;
-            metadataInfo.style.display = 'block';
+            elements.metadataInfo.style.display = 'block';
         }
         
         // プログレスバー更新（Reader モードのみ）
         function updateProgress() {
-            if (appData.mode !== 'metadata' || !isPlaying || !audioBuffer || !progressBar) return;
+            if (appData.mode !== 'metadata' || !isPlaying || !audioBuffer || !elements || !elements.progressBar) return;
             
             const currentTime = audioContext.currentTime - startTime;
             const progress = Math.min(currentTime / audioBuffer.duration * 100, 100);
-            progressFill.style.width = progress + '%';
+            if (elements.progressFill) {
+                elements.progressFill.style.width = progress + '%';
+            }
             
             if (progress < 100 && isPlaying) {
                 requestAnimationFrame(updateProgress);
@@ -524,6 +558,7 @@
         async function prepareAudio() {
             try {
                 updateStatus('🔄 音声データを準備中...');
+                log('Starting audio preparation');
                 
                 let audioDataUri;
                 let title;
@@ -532,6 +567,8 @@
                     // 🎯 iPhone直接再生モード
                     audioDataUri = appData.directAudio;
                     title = appData.title || 'Pearl Memorial - 直接再生';
+                    
+                    log('Direct mode data:', audioDataUri ? audioDataUri.substring(0, 50) + '...' : 'null');
                     
                     if (!audioDataUri || !audioDataUri.startsWith('data:audio/')) {
                         throw new Error('無効な音声データURIです');
@@ -542,7 +579,10 @@
                 } else if (appData.mode === 'metadata') {
                     // 🔧 Reader メタデータモード
                     const pearlData = appData.pearlData;
-                    if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
+                    
+                    log('Metadata mode data:', pearlData);
+                    
+                    if (!pearlData || !pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
                         throw new Error('無効なPearl Memorial形式です');
                     }
                     
@@ -556,10 +596,14 @@
                     // メタデータ表示
                     showMetadataInfo(pearlData);
                     log('Metadata mode initialized with full info');
+                } else {
+                    throw new Error('無効なモードです: ' + appData.mode);
                 }
                 
                 // タイトル表示
-                audioTitle.textContent = title;
+                if (elements && elements.audioTitle) {
+                    elements.audioTitle.textContent = title;
+                }
                 
                 // AudioContext初期化
                 await initAudioContext();
@@ -568,6 +612,10 @@
                 
                 // Base64デコード
                 const base64Data = audioDataUri.split(',')[1];
+                if (!base64Data) {
+                    throw new Error('Base64データが見つかりません');
+                }
+                
                 const binaryString = atob(base64Data);
                 const arrayBuffer = new ArrayBuffer(binaryString.length);
                 const uint8Array = new Uint8Array(arrayBuffer);
@@ -584,13 +632,17 @@
                 showAudioInfo(audioBuffer);
                 
                 updateStatus('✅ 再生準備完了', 'success');
-                playButton.disabled = false;
+                if (elements && elements.playButton) {
+                    elements.playButton.disabled = false;
+                }
                 
             } catch (error) {
                 log('Audio preparation failed: ' + error.message);
                 updateStatus('❌ エラー: ' + error.message, 'error');
-                playButton.textContent = '❌ 再生できません';
-                playButton.disabled = true;
+                if (elements && elements.playButton) {
+                    elements.playButton.textContent = '❌ 再生できません';
+                    elements.playButton.disabled = true;
+                }
             }
         }
         
@@ -679,44 +731,64 @@
             log('Playback ended');
         }
         
-        // イベントリスナー設定
-        playButton.addEventListener('click', playAudio);
-        replayButton.addEventListener('click', playAudio);
-        stopButton.addEventListener('click', stopAudio);
-        
-        // タッチイベント対応
-        [playButton, replayButton, stopButton].forEach(btn => {
-            btn.addEventListener('touchend', function(e) {
-                e.preventDefault();
-                this.click();
-            });
-        });
-        
-        // ユーザーインタラクション後にAudioContext初期化
-        document.addEventListener('click', async function() {
-            if (!audioContext) {
-                try {
-                    await initAudioContext();
-                } catch (error) {
-                    log('AudioContext init failed: ' + error.message);
-                }
-            }
-        }, { once: true });
-        
         // 初期化
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             log(`Pearl Memorial Play page loaded in ${appData.mode} mode`);
-            if (appData.mode !== 'error') {
-                prepareAudio();
+            
+            if (appData.mode === 'error') {
+                console.log('Pearl Memorial Play page loaded with error');
+                return;
+            }
+            
+            try {
+                // DOM要素初期化
+                elements = initializeElements();
+                log('DOM elements initialized');
+                
+                // イベントリスナー設定
+                if (elements.playButton) {
+                    elements.playButton.addEventListener('click', playAudio);
+                    elements.playButton.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        playAudio();
+                    });
+                }
+                
+                if (elements.replayButton) {
+                    elements.replayButton.addEventListener('click', playAudio);
+                    elements.replayButton.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        playAudio();
+                    });
+                }
+                
+                if (elements.stopButton) {
+                    elements.stopButton.addEventListener('click', stopAudio);
+                    elements.stopButton.addEventListener('touchend', function(e) {
+                        e.preventDefault();
+                        stopAudio();
+                    });
+                }
+                
+                // AudioContext初期化用のユーザーインタラクション
+                document.addEventListener('click', async function() {
+                    if (!audioContext) {
+                        try {
+                            await initAudioContext();
+                        } catch (error) {
+                            log('AudioContext init failed: ' + error.message);
+                        }
+                    }
+                }, { once: true });
+                
+                // 音声準備開始
+                await prepareAudio();
+                
+            } catch (error) {
+                log('Initialization failed: ' + error.message);
+                updateStatus('❌ 初期化エラー: ' + error.message, 'error');
             }
         });
-        
-        // エラー時の処理
-        if (appData.mode === 'error') {
-            document.addEventListener('DOMContentLoaded', () => {
-                console.log('Pearl Memorial Play page loaded with error');
-            });
-        }
     </script>
 </body>
 </html>
