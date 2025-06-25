@@ -128,15 +128,26 @@ def create_hybrid_qr(data_uri, metadata):
         "type": "standalone_audio",
         "audio_data": data_uri,
         "metadata": {
-            "title": metadata.get('filename', 'Pearl Memorial'),
+            "title": metadata.get('title', metadata.get('filename', 'Pearl Memorial')),
             "filename": metadata['filename'],
             "created": datetime.now().isoformat(),
             "duration": MAX_DURATION,
             "id": metadata['id'],
             "technology": "Server-Independent DataURI",
-            "creator": "Pearl Memorial System"
+            "creator": "Pearl Memorial System",
+            # ユーザー提供のメタデータを含める
+            "recipient": metadata.get('recipient'),
+            "description": metadata.get('description'),
+            "emotion_level": metadata.get('emotion_level'),
+            "special_occasion": metadata.get('special_occasion'),
+            "raw_size": metadata.get('raw_size'),
+            "process_type": metadata.get('process_type')
         }
     }
+    
+    # 位置情報を別途追加（存在する場合）
+    if metadata.get('location_data'):
+        pearl_data['location_data'] = metadata['location_data']
     
     json_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
     
@@ -365,13 +376,32 @@ def generate_qr():
         is_video = extension in VIDEO_EXTENSIONS
         process_type = f"Audio extracted from {extension.upper()} video" if is_video else f"Audio processed from {extension.upper()}"
         
+        # ユーザー入力のメタデータを取得
         metadata = {
             'filename': audio_file.filename,
             'id': unique_id,
             'raw_size': f"{raw_size} bytes",
             'process_type': process_type,
-            'technology': 'Server-Independent DataURI'
+            'technology': 'Server-Independent DataURI',
+            # ユーザー提供のメタデータを追加
+            'title': request.form.get('title', audio_file.filename),
+            'recipient': request.form.get('recipient'),
+            'description': request.form.get('description'),
+            'emotion_level': request.form.get('emotion_level'),
+            'special_occasion': request.form.get('special_occasion')
         }
+        
+        # 位置情報データの処理
+        location_data_str = request.form.get('location_data')
+        if location_data_str:
+            try:
+                location_data = json.loads(location_data_str)
+                metadata['location_data'] = location_data
+            except json.JSONDecodeError:
+                app.logger.warning(f"Failed to parse location data: {location_data_str}")
+                metadata['location_data'] = None
+        else:
+            metadata['location_data'] = None
         
         # 🚀 ハイブリッドQRコード生成
         qr_image = create_hybrid_qr(data_uri, metadata)
