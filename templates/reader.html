@@ -613,12 +613,23 @@
         function detectQRFormat(qrData) {
             const trimmedData = qrData.trim();
             
-            // 📱 iPhone標準カメラ用URL形式判定
+            // 📱 メタデータ付きURL形式判定（新形式）
+            if (trimmedData.startsWith('https://voice-memorial-qr.onrender.com/play?data=')) {
+                return {
+                    type: 'metadata_url',
+                    mode: 'メタデータ付きURL',
+                    description: '🚀 メタデータ付きURL形式',
+                    redirectUrl: trimmedData, // そのままリダイレクト
+                    dataParam: trimmedData.split('data=')[1]
+                };
+            }
+            
+            // 📱 iPhone標準カメラ用URL形式判定（旧形式）
             if (trimmedData.startsWith('https://voice-memorial-qr.onrender.com/play?audio=')) {
                 return {
                     type: 'url',
                     mode: 'iPhone直接再生',
-                    description: '📱 iPhone標準カメラ用URL形式',
+                    description: '📱 iPhone標準カメラ用URL形式（メタデータなし）',
                     redirectUrl: trimmedData, // そのままリダイレクト
                     audioParam: trimmedData.split('audio=')[1]
                 };
@@ -627,13 +638,27 @@
             // 🔧 JSON形式判定
             try {
                 const jsonData = JSON.parse(trimmedData);
-                if (jsonData.pearl_memorial && jsonData.type === 'standalone_audio') {
+                
+                // 新形式（コンパクト）
+                if (jsonData.v === "1") {
+                    // JSONデータをBase64エンコードしてdataパラメータで送信
+                    const encodedData = encodeURIComponent(btoa(trimmedData));
+                    return {
+                        type: 'json_compact',
+                        mode: 'Reader コンパクトJSON',
+                        description: '📱 Pearl Memorial コンパクトJSON形式',
+                        redirectUrl: `https://voice-memorial-qr.onrender.com/play?data=${encodedData}`,
+                        data: jsonData
+                    };
+                }
+                // 旧形式（互換性）
+                else if (jsonData.pearl_memorial && jsonData.type === 'standalone_audio') {
                     // JSONデータをBase64エンコードしてdataパラメータで送信
                     const encodedData = encodeURIComponent(btoa(trimmedData));
                     return {
                         type: 'json',
                         mode: 'Reader フル機能',
-                        description: '🔧 Pearl Memorial Reader用JSON形式',
+                        description: '🔧 Pearl Memorial Reader用JSON形式（旧形式）',
                         redirectUrl: `https://voice-memorial-qr.onrender.com/play?data=${encodedData}`,
                         data: jsonData
                     };
@@ -677,11 +702,19 @@
                 result += `形式: ${format.description}<br>`;
                 result += `モード: ${format.mode}<br><br>`;
 
-                if (format.type === 'url') {
+                if (format.type === 'metadata_url') {
+                    // メタデータ付きURL形式の詳細検証
+                    result += `<strong>🚀 メタデータ付きURL形式詳細:</strong><br>`;
+                    result += `✅ ベースURL確認済み<br>`;
+                    result += `✅ dataパラメータ存在<br>`;
+                    result += `✅ メタデータ情報を含む<br>`;
+
+                } else if (format.type === 'url') {
                     // URL形式の詳細検証
                     result += `<strong>📱 URL形式詳細:</strong><br>`;
                     result += `✅ ベースURL確認済み<br>`;
                     result += `✅ audioパラメータ存在<br>`;
+                    result += `⚠️ メタデータなし（旧形式）<br>`;
 
                     try {
                         const audioData = decodeURIComponent(format.audioParam);
@@ -693,6 +726,27 @@
                         }
                     } catch (error) {
                         result += `❌ URLデコードエラー: ${error.message}<br>`;
+                    }
+
+                } else if (format.type === 'json_compact') {
+                    // コンパクトJSON形式の詳細検証
+                    const pearlData = format.data;
+                    result += `<strong>📱 コンパクトJSON形式詳細:</strong><br>`;
+                    result += `✅ Pearl Memorial v1 コンパクト形式<br>`;
+
+                    if (pearlData.a && pearlData.a.startsWith('data:audio/')) {
+                        result += `✅ 音声データURI正常<br>`;
+                        result += `📏 音声データ長: ${pearlData.a.length} 文字<br>`;
+                    } else {
+                        result += `❌ 音声データURIが無効<br>`;
+                    }
+
+                    if (pearlData.m) {
+                        result += `✅ メタデータ存在<br>`;
+                        result += `📝 タイトル: ${pearlData.m.title || 'なし'}<br>`;
+                        result += `🆔 ID: ${pearlData.m.id || 'なし'}<br>`;
+                    } else {
+                        result += `❌ メタデータが見つかりません<br>`;
                     }
 
                 } else if (format.type === 'json') {
