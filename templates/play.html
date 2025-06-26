@@ -947,6 +947,15 @@
                     this.audioData = pearlData.audio_data;
                     this.metadata = pearlData.metadata;
                     this.locationData = pearlData.location_data;
+                    
+                    // デバッグ：受信したメタデータを確認
+                    this.log('📊 受信したメタデータ:');
+                    this.log(`   title: ${this.metadata?.title}`);
+                    this.log(`   recipient: ${this.metadata?.recipient}`);
+                    this.log(`   emotion_level: ${this.metadata?.emotion_level}`);
+                    this.log(`   description: ${this.metadata?.description}`);
+                    this.log(`   special_occasion: ${this.metadata?.special_occasion}`);
+                    
                     this.showMetadataMode();
                     
                 } catch (error) {

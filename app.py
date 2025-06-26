@@ -145,6 +145,11 @@ def create_hybrid_qr(data_uri, metadata):
         }
     }
     
+    # デバッグ：pearl_dataの内容を確認
+    print(f"📊 QRコードに含まれるメタデータ:")
+    print(f"   recipient: {pearl_data['metadata'].get('recipient')}")
+    print(f"   emotion_level: {pearl_data['metadata'].get('emotion_level')}")
+    
     # 位置情報を別途追加（存在する場合）
     if metadata.get('location_data'):
         pearl_data['location_data'] = metadata['location_data']
@@ -389,6 +394,14 @@ def generate_qr():
         is_video = extension in VIDEO_EXTENSIONS
         process_type = f"Audio extracted from {extension.upper()} video" if is_video else f"Audio processed from {extension.upper()}"
         
+        # デバッグ：リクエストフォームの内容を確認
+        print(f"📋 request.form の内容:")
+        for key, value in request.form.items():
+            print(f"   {key}: {value}")
+        print(f"📎 request.files の内容:")
+        for key in request.files:
+            print(f"   {key}: {request.files[key].filename}")
+        
         # ユーザー入力のメタデータを取得
         metadata = {
             'filename': audio_file.filename,
@@ -403,6 +416,14 @@ def generate_qr():
             'emotion_level': request.form.get('emotion_level'),
             'special_occasion': request.form.get('special_occasion')
         }
+        
+        # デバッグ：メタデータの内容を出力
+        print(f"📊 受信したメタデータ:")
+        print(f"   title: {metadata.get('title')}")
+        print(f"   recipient: {metadata.get('recipient')}")
+        print(f"   description: {metadata.get('description')}")
+        print(f"   emotion_level: {metadata.get('emotion_level')}")
+        print(f"   special_occasion: {metadata.get('special_occasion')}")
         
         # 位置情報データの処理
         location_data_str = request.form.get('location_data')
