@@ -18,8 +18,8 @@ app = Flask(__name__)
 # 設定定数
 TEMP_DIR = tempfile.gettempdir()
 MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
-MAX_DURATION = 1.0  # 1秒に短縮
-QR_MAX_SIZE = 50000  # QRコード最大サイズをさらに小さくして確実性を高める
+MAX_DURATION = 2.0  # 2秒
+QR_MAX_SIZE = 70000  # QRコード最大サイズ
 
 # 対応ファイル形式
 AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'}
@@ -70,8 +70,8 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
         is_video = extension in VIDEO_EXTENSIONS
         base_cmd = [
             'ffmpeg', '-i', file_path,
-            '-af', 'highpass=f=100,lowpass=f=6000',  # より狭い帯域でサイズ削減
-            '-c:a', 'libopus', '-b:a', '0.8k', '-ac', '1', '-ar', '8000',  # ビットレートを0.8kに下げる
+            '-af', 'highpass=f=80,lowpass=f=8000',
+            '-c:a', 'libopus', '-b:a', '1k', '-ac', '1', '-ar', '8000',
             '-t', str(duration), '-y', opus_path
         ]
         
@@ -112,111 +112,48 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
             except:
                 pass
 
-def create_hybrid_qr(data_uri, metadata):
-    """🚀 革命的ハイブリッドQRコード生成（iPhone標準カメラ＋Reader両対応）"""
+def create_simple_qr(data_uri):
+    """シンプルなQRコード生成（音声のみ）"""
     
     # サーバーのベースURL（本番環境では実際のドメインを使用）
     base_url = "https://voice-memorial-qr.onrender.com"
     
-    # 🎯 戦略1: iPhone標準カメラ用（直接音声再生）
+    # iPhone標準カメラ用（直接音声再生）
     audio_param = urllib.parse.quote(data_uri)
     direct_url = f"{base_url}/play?audio={audio_param}"
     
-    # 🎯 戦略2: Pearl Memorial Reader用（メタデータ付き）
-    # コンパクトなメタデータ構造
-    pearl_metadata = {
-        "title": metadata.get('title', metadata.get('filename', 'Pearl Memorial')),
-        "id": metadata['id'],
-        "created": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # より短い日付形式
-    }
-    
-    # ユーザー提供のメタデータを追加（値がある場合のみ）
-    if metadata.get('recipient'):
-        pearl_metadata['recipient'] = metadata['recipient']
-    if metadata.get('description'):
-        pearl_metadata['description'] = metadata['description']
-    if metadata.get('emotion_level'):
-        pearl_metadata['emotion_level'] = metadata['emotion_level']
-    if metadata.get('special_occasion'):
-        pearl_metadata['special_occasion'] = metadata['special_occasion']
-    
-    pearl_data = {
-        "v": "1",  # バージョンを短くする
-        "a": data_uri,  # audio_dataを短いキーに
-        "m": pearl_metadata  # metadataを短いキーに
-    }
-    
-    
-    # 位置情報を別途追加（存在する場合）
-    if metadata.get('location_data'):
-        pearl_data['l'] = metadata['location_data']
-    
-    json_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
-    
-    # 🎯 戦略3: メタデータ付きURL（ハイブリッド最適化）
-    # JSONをBase64エンコードしてURLパラメータとして渡す
-    json_base64 = base64.b64encode(json_content.encode('utf-8')).decode('utf-8')
-    metadata_url = f"{base_url}/play?data={urllib.parse.quote(json_base64)}"
-    
-    # 🧠 智的判定：最適形式を自動選択
-    print(f"🔍 QR戦略分析:")
-    print(f"   📱 iPhone直接URL: {len(direct_url)} 文字")
-    print(f"   📄 Reader用JSON: {len(json_content)} 文字")
-    print(f"   🚀 メタデータ付きURL: {len(metadata_url)} 文字")
+    print(f"🔍 QRコード生成:")
+    print(f"   📱 URL長: {len(direct_url)} 文字")
     print(f"   📏 QR最大制限: {QR_MAX_SIZE} 文字")
     
-    # サイズ最適化による自動選択
-    # メタデータを保持するため、メタデータ付きURLを優先
-    if len(metadata_url) <= QR_MAX_SIZE:
-        final_content = metadata_url
-        qr_type = "🚀 メタデータ付きURL"
-        print(f"✅ 選択: Pearl Memorial フルメタデータURL対応 ({len(metadata_url)} chars)")
-        print(f"📋 QRコード内容: {metadata_url[:100]}...")
-    elif len(json_content) <= QR_MAX_SIZE:
-        # URLが大きすぎる場合はJSON形式を使用（Readerアプリ必須）
-        final_content = json_content
-        qr_type = "📱 Reader専用JSON"
-        print(f"📱 選択: Pearl Memorial Reader専用 ({len(json_content)} chars)")
-        print(f"📋 QRコード内容: {json_content[:100]}...")
-    elif len(direct_url) <= QR_MAX_SIZE:
-        # JSONも大きすぎる場合のみURL形式を使用（メタデータなし）
-        final_content = direct_url
-        qr_type = "🎯 iPhone直接再生URL（メタデータなし）"
-        print(f"⚠️ 選択: iPhone標準カメラ最適化 - メタデータなし ({len(direct_url)} chars)")
-        print(f"📋 QRコード内容: {direct_url[:100]}...")
-    else:
-        raise PearlMemorialError(f'音声データが大きすぎます。全形式ともQR制限を超過しています。')
+    if len(direct_url) > QR_MAX_SIZE:
+        raise PearlMemorialError(f'音声データが大きすぎます（{len(direct_url)}文字）。音声を短くしてください。')
+    
+    final_content = direct_url
+    qr_type = "🎯 iPhone直接再生URL"
+    print(f"✅ 生成: シンプル音声再生QR ({len(direct_url)} chars)")
     
     # QRコード生成
     qr = qrcode.QRCode(
         version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=4,
-        border=1,
+        box_size=10,
+        border=4,
     )
     
     try:
         qr.add_data(final_content)
         qr.make(fit=True)
         
-        print(f"📊 QRコード Version {qr.version} - {qr_type}")
+        print(f"📊 QRコード Version {qr.version}")
         
         if qr.version > 40:
             raise PearlMemorialError(f'QRコードが大きすぎます（バージョン{qr.version}）')
         
-        # QR画像生成
+        # QR画像生成（シンプル版）
         qr_img = qr.make_image(fill_color="black", back_color="white")
         
-        # メタデータ付きQR画像生成
-        final_img = add_qr_metadata(qr_img, {
-            **metadata,
-            'qr_version': f"Version {qr.version}",
-            'content_length': f"{len(final_content)} chars",
-            'qr_type': qr_type,
-            'hybrid_mode': 'iPhone + Reader Compatible'
-        })
-        
-        return final_img
+        return qr_img
         
     except Exception as e:
         print(f"❌ QRコード生成エラー: {str(e)}")
@@ -393,48 +330,16 @@ def generate_qr():
         # DataURI生成
         data_uri, raw_size = process_audio_to_datauri(temp_file_path)
         
-        # メタデータ準備
-        is_video = extension in VIDEO_EXTENSIONS
-        process_type = f"Audio extracted from {extension.upper()} video" if is_video else f"Audio processed from {extension.upper()}"
         
-        
-        # ユーザー入力のメタデータを取得
-        metadata = {
-            'filename': audio_file.filename,
-            'id': unique_id,
-            'raw_size': f"{raw_size} bytes",
-            'process_type': process_type,
-            'technology': 'Server-Independent DataURI',
-            # ユーザー提供のメタデータを追加
-            'title': request.form.get('title', audio_file.filename),
-            'recipient': request.form.get('recipient'),
-            'description': request.form.get('description'),
-            'emotion_level': request.form.get('emotion_level'),
-            'special_occasion': request.form.get('special_occasion')
-        }
-        
-        
-        # 位置情報データの処理
-        location_data_str = request.form.get('location_data')
-        if location_data_str:
-            try:
-                location_data = json.loads(location_data_str)
-                metadata['location_data'] = location_data
-            except json.JSONDecodeError:
-                app.logger.warning(f"Failed to parse location data: {location_data_str}")
-                metadata['location_data'] = None
-        else:
-            metadata['location_data'] = None
-        
-        # 🚀 ハイブリッドQRコード生成
-        qr_image = create_hybrid_qr(data_uri, metadata)
+        # シンプルQRコード生成
+        qr_image = create_simple_qr(data_uri)
         
         # 画像返却
         img_io = io.BytesIO()
         qr_image.save(img_io, 'PNG', optimize=True, quality=95)
         img_io.seek(0)
         
-        download_name = f"pearl_memorial_hybrid_{Path(audio_file.filename).stem}_{unique_id}.png"
+        download_name = f"pearl_memorial_{Path(audio_file.filename).stem}_{unique_id}.png"
         
         return send_file(img_io, mimetype='image/png', as_attachment=True, 
                         download_name=download_name)
@@ -463,7 +368,7 @@ def health_check():
     
     return jsonify({
         'status': 'healthy' if ffmpeg_available else 'degraded',
-        'message': 'Pearl Memorial Hybrid QR Generator',
+        'message': 'Pearl Memorial Simple QR Generator',
         'ffmpeg_available': ffmpeg_available,
         'technology': 'Server-Independent DataURI',
         'hybrid_support': {
