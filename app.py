@@ -151,23 +151,36 @@ def create_hybrid_qr(data_uri, metadata):
     
     json_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
     
+    # 🎯 戦略3: メタデータ付きURL（ハイブリッド最適化）
+    # JSONをBase64エンコードしてURLパラメータとして渡す
+    json_base64 = base64.b64encode(json_content.encode('utf-8')).decode('utf-8')
+    metadata_url = f"{base_url}/play?data={urllib.parse.quote(json_base64)}"
+    
     # 🧠 智的判定：最適形式を自動選択
     print(f"🔍 QR戦略分析:")
     print(f"   📱 iPhone直接URL: {len(direct_url)} 文字")
     print(f"   📄 Reader用JSON: {len(json_content)} 文字")
+    print(f"   🚀 メタデータ付きURL: {len(metadata_url)} 文字")
     print(f"   📏 QR最大制限: {QR_MAX_SIZE} 文字")
     
     # サイズ最適化による自動選択
-    if len(direct_url) <= QR_MAX_SIZE and len(direct_url) < len(json_content):
-        final_content = direct_url
-        qr_type = "🎯 iPhone直接再生URL"
-        print(f"✅ 選択: iPhone標準カメラ最適化 ({len(direct_url)} chars)")
+    # メタデータを保持するため、メタデータ付きURLを優先
+    if len(metadata_url) <= QR_MAX_SIZE:
+        final_content = metadata_url
+        qr_type = "🚀 メタデータ付きURL"
+        print(f"✅ 選択: Pearl Memorial フルメタデータURL対応 ({len(metadata_url)} chars)")
     elif len(json_content) <= QR_MAX_SIZE:
+        # URLが大きすぎる場合はJSON形式を使用（Readerアプリ必須）
         final_content = json_content
-        qr_type = "📱 Reader用JSON"
-        print(f"✅ 選択: Pearl Memorial Reader最適化 ({len(json_content)} chars)")
+        qr_type = "📱 Reader専用JSON"
+        print(f"📱 選択: Pearl Memorial Reader専用 ({len(json_content)} chars)")
+    elif len(direct_url) <= QR_MAX_SIZE:
+        # JSONも大きすぎる場合のみURL形式を使用（メタデータなし）
+        final_content = direct_url
+        qr_type = "🎯 iPhone直接再生URL（メタデータなし）"
+        print(f"⚠️ 選択: iPhone標準カメラ最適化 - メタデータなし ({len(direct_url)} chars)")
     else:
-        raise PearlMemorialError(f'音声データが大きすぎます。両形式ともQR制限を超過しています。')
+        raise PearlMemorialError(f'音声データが大きすぎます。全形式ともQR制限を超過しています。')
     
     # QRコード生成
     qr = qrcode.QRCode(

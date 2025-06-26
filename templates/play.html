@@ -1000,6 +1000,14 @@
                 
                 this.elements.audioTitle.textContent = this.metadata?.title || 'Pearl Memorial';
                 
+                // device_infoとbrowser_infoが存在しない場合は自動生成
+                if (!this.metadata.device_info) {
+                    this.metadata.device_info = this.detectDeviceInfo();
+                }
+                if (!this.metadata.browser_info) {
+                    this.metadata.browser_info = this.detectBrowserInfo();
+                }
+                
                 // シンプルメタデータ表示
                 this.showSimpleMetadataInfo();
                 
@@ -1132,7 +1140,9 @@
                         },
                         {
                             label: "📱 記録デバイス",
-                            value: `${this.metadata.device_info.platform} ${this.metadata.device_info.mobile ? 'Mobile' : 'Desktop'}`,
+                            value: this.metadata.device_info ? 
+                                `${this.metadata.device_info.platform} ${this.metadata.device_info.mobile ? 'Mobile' : 'Desktop'}` : 
+                                "未設定",
                             type: "auto"
                         }
                     ];
@@ -1181,12 +1191,16 @@
                     },
                     {
                         label: "🌐 ブラウザ",
-                        value: `${this.metadata.browser_info.name} (${this.metadata.browser_info.language})`,
+                        value: this.metadata.browser_info ? 
+                            `${this.metadata.browser_info.name} (${this.metadata.browser_info.language})` : 
+                            "未設定",
                         type: "auto technical"
                     },
                     {
                         label: "📺 画面サイズ",
-                        value: this.metadata.device_info.screen_size,
+                        value: this.metadata.device_info ? 
+                            this.metadata.device_info.screen_size : 
+                            "未設定",
                         type: "auto technical"
                     }
                 ];
