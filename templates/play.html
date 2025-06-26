@@ -940,13 +940,23 @@
                     
                     const pearlData = JSON.parse(jsonData);
                     
-                    if (!pearlData.pearl_memorial || pearlData.type !== 'standalone_audio') {
+                    // 新旧両方の形式に対応
+                    if (pearlData.v === "1" || (pearlData.pearl_memorial && pearlData.type === 'standalone_audio')) {
+                        // 新形式（コンパクト）
+                        if (pearlData.v === "1") {
+                            this.audioData = pearlData.a;
+                            this.metadata = pearlData.m;
+                            this.locationData = pearlData.l;
+                        } 
+                        // 旧形式（互換性のため）
+                        else {
+                            this.audioData = pearlData.audio_data;
+                            this.metadata = pearlData.metadata;
+                            this.locationData = pearlData.location_data;
+                        }
+                    } else {
                         throw new Error('Invalid Pearl Memorial format');
                     }
-                    
-                    this.audioData = pearlData.audio_data;
-                    this.metadata = pearlData.metadata;
-                    this.locationData = pearlData.location_data;
                     
                     // デバッグ：受信したメタデータを確認
                     this.log('📊 受信したメタデータ:');

@@ -18,8 +18,8 @@ app = Flask(__name__)
 # 設定定数
 TEMP_DIR = tempfile.gettempdir()
 MAX_FILE_SIZE = 3 * 1024 * 1024  # 3MB
-MAX_DURATION = 2.0  # 2秒
-QR_MAX_SIZE = 70000  # QRコード最大サイズ
+MAX_DURATION = 1.5  # 1.5秒に短縮
+QR_MAX_SIZE = 65000  # QRコード最大サイズを少し小さくして安全マージンを確保
 
 # 対応ファイル形式
 AUDIO_EXTENSIONS = {'.mp3', '.m4a', '.wav', '.aac', '.ogg', '.flac'}
@@ -99,7 +99,7 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
         data_uri = f"data:audio/ogg;codecs=opus;base64,{encoded}"
         
         if len(data_uri) > QR_MAX_SIZE:
-            raise PearlMemorialError(f'音声が長すぎます（{len(data_uri)}文字）。{duration}秒以下にしてください')
+            raise PearlMemorialError(f'音声が長すぎます（{len(data_uri)}文字）。{duration}秒以下、できれば1秒程度にしてください')
         
         return data_uri, len(raw_data)
         
@@ -123,36 +123,37 @@ def create_hybrid_qr(data_uri, metadata):
     direct_url = f"{base_url}/play?audio={audio_param}"
     
     # 🎯 戦略2: Pearl Memorial Reader用（メタデータ付き）
+    # コンパクトなメタデータ構造
+    pearl_metadata = {
+        "title": metadata.get('title', metadata.get('filename', 'Pearl Memorial')),
+        "id": metadata['id'],
+        "created": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),  # より短い日付形式
+    }
+    
+    # ユーザー提供のメタデータを追加（値がある場合のみ）
+    if metadata.get('recipient'):
+        pearl_metadata['recipient'] = metadata['recipient']
+    if metadata.get('description'):
+        pearl_metadata['description'] = metadata['description']
+    if metadata.get('emotion_level'):
+        pearl_metadata['emotion_level'] = metadata['emotion_level']
+    if metadata.get('special_occasion'):
+        pearl_metadata['special_occasion'] = metadata['special_occasion']
+    
     pearl_data = {
-        "pearl_memorial": "v1.0",
-        "type": "standalone_audio",
-        "audio_data": data_uri,
-        "metadata": {
-            "title": metadata.get('title', metadata.get('filename', 'Pearl Memorial')),
-            "filename": metadata['filename'],
-            "created": datetime.now().isoformat(),
-            "duration": MAX_DURATION,
-            "id": metadata['id'],
-            "technology": "Server-Independent DataURI",
-            "creator": "Pearl Memorial System",
-            # ユーザー提供のメタデータを含める
-            "recipient": metadata.get('recipient'),
-            "description": metadata.get('description'),
-            "emotion_level": metadata.get('emotion_level'),
-            "special_occasion": metadata.get('special_occasion'),
-            "raw_size": metadata.get('raw_size'),
-            "process_type": metadata.get('process_type')
-        }
+        "v": "1",  # バージョンを短くする
+        "a": data_uri,  # audio_dataを短いキーに
+        "m": pearl_metadata  # metadataを短いキーに
     }
     
     # デバッグ：pearl_dataの内容を確認
     print(f"📊 QRコードに含まれるメタデータ:")
-    print(f"   recipient: {pearl_data['metadata'].get('recipient')}")
-    print(f"   emotion_level: {pearl_data['metadata'].get('emotion_level')}")
+    print(f"   recipient: {pearl_metadata.get('recipient')}")
+    print(f"   emotion_level: {pearl_metadata.get('emotion_level')}")
     
     # 位置情報を別途追加（存在する場合）
     if metadata.get('location_data'):
-        pearl_data['location_data'] = metadata['location_data']
+        pearl_data['l'] = metadata['location_data']
     
     json_content = json.dumps(pearl_data, ensure_ascii=False, separators=(',', ':'))
     
