@@ -112,15 +112,29 @@ def process_audio_to_datauri(file_path, duration=MAX_DURATION):
             except:
                 pass
 
-def create_simple_qr(data_uri):
-    """シンプルなQRコード生成（音声のみ）"""
+def create_simple_qr(data_uri, timestamp=None, location=None):
+    """シンプルなQRコード生成（音声＋最小限のメタデータ）"""
     
     # サーバーのベースURL（本番環境では実際のドメインを使用）
     base_url = "https://voice-memorial-qr.onrender.com"
     
     # iPhone標準カメラ用（直接音声再生）
     audio_param = urllib.parse.quote(data_uri)
-    direct_url = f"{base_url}/play?audio={audio_param}"
+    
+    # URLの構築
+    params = [f"audio={audio_param}"]
+    
+    # タイムスタンプの追加（UTC形式で短縮）
+    if timestamp:
+        ts_param = urllib.parse.quote(timestamp)
+        params.append(f"ts={ts_param}")
+    
+    # 位置情報の追加（緯度,経度の形式）
+    if location:
+        loc_param = urllib.parse.quote(location)
+        params.append(f"loc={loc_param}")
+    
+    direct_url = f"{base_url}/play?" + "&".join(params)
     
     print(f"🔍 QRコード生成:")
     print(f"   📱 URL長: {len(direct_url)} 文字")
@@ -130,7 +144,7 @@ def create_simple_qr(data_uri):
         raise PearlMemorialError(f'音声データが大きすぎます（{len(direct_url)}文字）。音声を短くしてください。')
     
     final_content = direct_url
-    qr_type = "🎯 iPhone直接再生URL"
+    qr_type = "🎯 シンプルメタデータ付きURL"
     print(f"✅ 生成: シンプル音声再生QR ({len(direct_url)} chars)")
     
     # QRコード生成
@@ -250,11 +264,32 @@ def play_audio():
             if not audio_data_uri.startswith('data:audio/'):
                 raise ValueError('無効な音声データURI')
             
+            # タイムスタンプと位置情報の取得
+            ts_param = request.args.get('ts')
+            loc_param = request.args.get('loc')
+            
+            timestamp = None
+            location = None
+            
+            if ts_param:
+                # タイムスタンプを人間が読める形式に変換
+                try:
+                    ts = datetime.strptime(ts_param, '%Y%m%d%H%M%S')
+                    timestamp = ts.strftime('%Y年%m月%d日 %H:%M:%S UTC')
+                except:
+                    timestamp = ts_param
+            
+            if loc_param:
+                # 位置情報は "緯度,経度" の形式
+                location = loc_param
+            
             # 直接再生モードでレンダリング
             return render_template('play.html', 
                                  direct_audio=audio_data_uri,
                                  mode='direct',
-                                 title='Pearl Memorial - 直接再生')
+                                 title='Pearl Memorial',
+                                 timestamp=timestamp,
+                                 location=location)
                                  
         except Exception as e:
             print(f"❌ iPhone直接再生エラー: {str(e)}")
@@ -330,9 +365,18 @@ def generate_qr():
         # DataURI生成
         data_uri, raw_size = process_audio_to_datauri(temp_file_path)
         
+        # 現在のタイムスタンプ（UTCで短縮形式）
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        
+        # 位置情報の取得（もし送信されていれば）
+        location = None
+        location_str = request.form.get('location')
+        if location_str:
+            # 位置情報は "緯度,経度" の形式で送信される
+            location = location_str
         
         # シンプルQRコード生成
-        qr_image = create_simple_qr(data_uri)
+        qr_image = create_simple_qr(data_uri, timestamp, location)
         
         # 画像返却
         img_io = io.BytesIO()
